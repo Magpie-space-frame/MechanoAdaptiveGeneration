@@ -28,7 +28,7 @@ namespace MechanoAdaptiveGeneration
         }
 
         //evaluate % total volume taken up by ellipsoids, and correct the scaling factor if needed
-        public void updateScaleByVolume(ref double scale, ref double totalEllipsoidVolume, ref List<Ellipsoid> ellis, ref double meshVol)
+        public static void updateScaleByVolume(ref double scale, ref double totalEllipsoidVolume, ref List<Ellipsoid> ellis, ref double meshVol)
         {
             double targetEllipsoidVolume = 1.8 * meshVol;
             scale = scale * Math.Pow(targetEllipsoidVolume / totalEllipsoidVolume, 1.0 / 3.0);
@@ -38,86 +38,84 @@ namespace MechanoAdaptiveGeneration
             }
         }
 
-        //TODO: make a struct that holds G T0, T1, etc
-        public void processData(List<double> dataToProcess)
+        public static void processData(List<double> dataToProcess, ref BackGroundData backGroundData, ref StressTensor[,,] grid)
         {
-            G.Clear();
-
-            T0.Clear();
-            T1.Clear();
-            T2.Clear();
-            T3.Clear();
-            T4.Clear();
-            T5.Clear();
+            backGroundData.G.Clear();
+            backGroundData.T0.Clear();
+            backGroundData.T1.Clear();
+            backGroundData.T2.Clear();
+            backGroundData.T3.Clear();
+            backGroundData.T4.Clear();
+            backGroundData.T5.Clear();
 
             while (dataToProcess.Any())
             {
                 List<double> localDataList = dataToProcess.Take(9).ToList();
 
-                G.Add(new Point3d(localDataList[0], localDataList[1], localDataList[2]));
+                backGroundData.G.Add(new Point3d(localDataList[0], localDataList[1], localDataList[2]));
 
-                T0.Add(localDataList[3]);
-                T1.Add(localDataList[4]);
-                T2.Add(localDataList[5]);
-                T3.Add(localDataList[6]);
-                T4.Add(localDataList[7]);
-                T5.Add(localDataList[8]);
+                backGroundData.T0.Add(localDataList[3]);
+                backGroundData.T1.Add(localDataList[4]);
+                backGroundData.T2.Add(localDataList[5]);
+                backGroundData.T3.Add(localDataList[6]);
+                backGroundData.T4.Add(localDataList[7]);
+                backGroundData.T5.Add(localDataList[8]);
 
                 dataToProcess = dataToProcess.Skip(9).ToList();
             }
 
             //find grid count and size
-            xCount = yCount = zCount = 0;
-            xSize = ySize = zSize = 0;
+            backGroundData.xCount = backGroundData.yCount = backGroundData.zCount = 0;
+            backGroundData.xSize = backGroundData.ySize = backGroundData.zSize = 0;
 
-            StressTensor[] Tensors = new StressTensor[G.Count];
-            for (int i = 0; i < G.Count; i++)
+            StressTensor[] Tensors = new StressTensor[backGroundData.G.Count];
+            for (int i = 0; i < backGroundData.G.Count; i++)
             {
-                Tensors[i] = new StressTensor(new List<double> { T0[i], T1[i], T2[i], T1[i], T3[i], T4[i], T2[i], T4[i], T5[i] });
+                Tensors[i] = new StressTensor(new List<double> { backGroundData.T0[i], backGroundData.T1[i], backGroundData.T2[i], backGroundData.T1[i], backGroundData.T3[i], backGroundData.T4[i], backGroundData.T2[i], backGroundData.T4[i], backGroundData.T5[i] });
             }
 
-            Array.Sort(G.ToArray(), Tensors);
-            G.Sort();
+            Array.Sort(backGroundData.G.ToArray(), Tensors);
+            backGroundData.G.Sort();
 
-            zSize = G[1].Z - G[0].Z;
+            backGroundData.zSize = backGroundData.G[1].Z - backGroundData.G[0].Z;
 
-            for (int i = 1; i < G.Count; i++)
+            for (int i = 1; i < backGroundData.G.Count; i++)
             {
-                if (G[i].Y > G[0].Y)
+                if (backGroundData.G[i].Y > backGroundData.G[0].Y)
                 {
-                    ySize = G[i].Y - G[0].Y;
-                    zCount = i;
+                    backGroundData.ySize = backGroundData.G[i].Y - backGroundData.G[0].Y;
+                    backGroundData.zCount = i;
                     break;
                 }
             }
 
-            for (int i = 1; i < G.Count; i++)
+            for (int i = 1; i < backGroundData.G.Count; i++)
             {
-                if (G[i].X > G[0].X)
+                if (backGroundData.G[i].X > backGroundData.G[0].X)
                 {
-                    xSize = G[i].X - G[0].X;
-                    yCount = i / zCount;
+                    backGroundData.xSize = backGroundData.G[i].X - backGroundData.G[0].X;
+                    backGroundData.yCount = i / backGroundData.zCount;
                     break;
                 }
             }
 
-            xCount = G.Count / (zCount * yCount);
+            backGroundData.xCount = backGroundData.G.Count / (backGroundData.zCount * backGroundData.yCount);
 
-            Grid = new StressTensor[xCount, yCount, zCount];
+            grid = new StressTensor[backGroundData.xCount, backGroundData.yCount, backGroundData.zCount];
 
-            for (int i = 0; i < xCount; i++)
+            for (int i = 0; i < backGroundData.xCount; i++)
             {
-                for (int j = 0; j < yCount; j++)
+                for (int j = 0; j < backGroundData.yCount; j++)
                 {
-                    for (int k = 0; k < zCount; k++)
+                    for (int k = 0; k < backGroundData.zCount; k++)
                     {
-                        Grid[i, j, k] = Tensors[k + j * zCount + i * zCount * yCount];
+                        grid[i, j, k] = Tensors[k + j * backGroundData.zCount + i * backGroundData.zCount * backGroundData.yCount];
                     }
                 }
             }
         }
 
-        public void SweepAndPrune(List<Ellipsoid> Ellipsoids, Point3d[] Positions, ref List<int> CollideRef0, ref List<int> CollideRef1)
+        public static void SweepAndPrune(List<Ellipsoid> Ellipsoids, Point3d[] Positions, ref List<int> CollideRef0, ref List<int> CollideRef1)
         {
             List<AABB> boxes = new List<AABB>();
 
@@ -179,7 +177,7 @@ namespace MechanoAdaptiveGeneration
             }
         }
 
-        public void InterpolateTensor(Point3d[] Pts, ref List<Vector3d> Evec1, ref List<Vector3d> Evec2, ref List<Vector3d> Evec3, ref List<double> Eval1, ref List<double> Eval2, ref List<double> Eval3)
+        public static void InterpolateTensor(Point3d[] Pts, ref List<Vector3d> Evec1, ref List<Vector3d> Evec2, ref List<Vector3d> Evec3, ref List<double> Eval1, ref List<double> Eval2, ref List<double> Eval3, StressTensor[,,] Grid, BackGroundData backGroundData)
         {
             int nOfPoints = Pts.Count();
 
@@ -210,11 +208,11 @@ namespace MechanoAdaptiveGeneration
             System.Threading.Tasks.Parallel.For(0, nOfPoints,
               j =>
               {
-                  var PVec = Pts[j] - G[0];  //position vector of the current point relative to grid origin
+                  var PVec = Pts[j] - backGroundData.G[0];  //position vector of the current point relative to grid origin
 
-                  var PX = PVec.X / xSize;
-                  var PY = PVec.Y / ySize;
-                  var PZ = PVec.Z / zSize;
+                  var PX = PVec.X / backGroundData.xSize;
+                  var PY = PVec.Y / backGroundData.ySize;
+                  var PZ = PVec.Z / backGroundData.zSize;
 
                   int PXF, PXC, PYF, PYC, PZF, PZC;
 
@@ -224,9 +222,9 @@ namespace MechanoAdaptiveGeneration
                   {
                       PXF = 0; PXC = 1; CoordsInCell.X = 0;
                   }
-                  else if (PX > xCount - 1)
+                  else if (PX > backGroundData.xCount - 1)
                   {
-                      PXF = xCount - 2; PXC = xCount - 1; CoordsInCell.X = 1;
+                      PXF = backGroundData.xCount - 2; PXC = backGroundData.xCount - 1; CoordsInCell.X = 1;
                   }
                   else
                   {
@@ -238,9 +236,9 @@ namespace MechanoAdaptiveGeneration
                   {
                       PYF = 0; PYC = 1; CoordsInCell.Y = 0;
                   }
-                  else if (PY > yCount - 1)
+                  else if (PY > backGroundData.yCount - 1)
                   {
-                      PYF = yCount - 2; PYC = yCount - 1; CoordsInCell.Y = 1;
+                      PYF = backGroundData.yCount - 2; PYC = backGroundData.yCount - 1; CoordsInCell.Y = 1;
                   }
                   else
                   {
@@ -252,9 +250,9 @@ namespace MechanoAdaptiveGeneration
                   {
                       PZF = 0; PZC = 1; CoordsInCell.Z = 0;
                   }
-                  else if (PZ > zCount - 1)
+                  else if (PZ > backGroundData.zCount - 1)
                   {
-                      PZF = zCount - 2; PZC = zCount - 1; CoordsInCell.Z = 1;
+                      PZF = backGroundData.zCount - 2; PZC = backGroundData.zCount - 1; CoordsInCell.Z = 1;
                   }
                   else
                   {
@@ -347,7 +345,7 @@ namespace MechanoAdaptiveGeneration
         /// <param name="T">3 numbers in the range 0 to 1</param>
         /// <returns>the interpolated stress tensor at the given coordinates</returns>
         ///
-        public StressTensor TriLinearInterpolate(StressTensor[] CornerTensors, double[] T)
+        public static StressTensor TriLinearInterpolate(StressTensor[] CornerTensors, double[] T)
         {
             //first get the 4 values along the edges in the x direction
             StressTensor SX0 = LinearInterpolate(CornerTensors[0], CornerTensors[4], T[0]);
@@ -372,15 +370,13 @@ namespace MechanoAdaptiveGeneration
             }
             else
             {
-                //var Mx = double.MaxValue;
-                var Mx = ev1max;
-
-                return new StressTensor(new List<double> { Mx, 0, 0, 0, Mx, 0, 0, 0, Mx });
+                //if NaN then send in a large number..
+                return new StressTensor(new List<double> { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 });
             }
 
         }
 
-        public StressTensor LinearInterpolate(StressTensor TensorA, StressTensor TensorB, double T)
+        public static StressTensor LinearInterpolate(StressTensor TensorA, StressTensor TensorB, double T)
         {
             var Interp = new StressTensor();
             int NaNorZeroCount = 0;
