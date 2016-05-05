@@ -39,7 +39,7 @@ namespace MechanoAdaptiveGeneration
             pManager.AddBooleanParameter("ValenceFilter", "VF", "Filter the edges depending on valence", GH_ParamAccess.item);
             pManager.AddNumberParameter("BoundaryStrength", "BS", "The strength for the boundary collision", GH_ParamAccess.item);
             pManager.AddNumberParameter("FixedPoints", "FP", "The indices of any points that should be fixed during the generation", GH_ParamAccess.list);
-            pManager.AddNumberParameter("MaxIternations", "MI", "The maximum number of iterations for the generation", GH_ParamAccess.item);
+            pManager.AddNumberParameter("MaxIterations", "MI", "The maximum number of iterations for the generation", GH_ParamAccess.item);
 
         }
 
@@ -193,14 +193,14 @@ namespace MechanoAdaptiveGeneration
                     //ev1max = ev1mean * 1.5;
                     //ev1min = ev1mean * 0.5;
                     
-                    var ix = new List<Point3d>();
+                    var ix = new List<int>();
 
                     if (Evec1 != null && Evec2 != null && Evec3 != null || true)
                     {
                         for (int i = 0; i < Pts.Count; i++)
                         {
                             PS.AddParticle(Pts[i], 1); //add a particle for every point
-                            ix.Add(Pts[i]);
+                            ix.Add(i);
                             Ellipsoids.Add(new Ellipsoid(Pts[i]));
 
                             //translate these values to rs and rl

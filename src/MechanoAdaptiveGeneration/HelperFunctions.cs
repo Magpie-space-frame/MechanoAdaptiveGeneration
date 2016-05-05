@@ -40,14 +40,14 @@ namespace MechanoAdaptiveGeneration
 
         public static void processData(List<double> dataToProcess, ref BackGroundData backGroundData, ref StressTensor[,,] grid)
         {
-            backGroundData.G.Clear();
-            backGroundData.T0.Clear();
-            backGroundData.T1.Clear();
-            backGroundData.T2.Clear();
-            backGroundData.T3.Clear();
-            backGroundData.T4.Clear();
-            backGroundData.T5.Clear();
-
+            backGroundData.G = new List<Point3d>();
+            backGroundData.T0 = new List<double>();
+            backGroundData.T1 = new List<double>();
+            backGroundData.T2 = new List<double>();
+            backGroundData.T3 = new List<double>();
+            backGroundData.T4 = new List<double>();
+            backGroundData.T5= new List<double>();
+                                     
             while (dataToProcess.Any())
             {
                 List<double> localDataList = dataToProcess.Take(9).ToList();
