@@ -38,8 +38,8 @@ namespace MechanoAdaptiveGeneration
             pManager.AddBooleanParameter("UpdateScale", "US", "Update the scale during the generation", GH_ParamAccess.item);
             pManager.AddBooleanParameter("ValenceFilter", "VF", "Filter the edges depending on valence", GH_ParamAccess.item);
             pManager.AddNumberParameter("BoundaryStrength", "BS", "The strength for the boundary collision", GH_ParamAccess.item);
-            pManager.AddNumberParameter("FixedPoints", "FP", "The indices of any points that should be fixed during the generation", GH_ParamAccess.list);
-            pManager.AddNumberParameter("MaxIterations", "MI", "The maximum number of iterations for the generation", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("FixedPoints", "FP", "The indices of any points that should be fixed during the generation", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("MaxIterations", "MI", "The maximum number of iterations for the generation", GH_ParamAccess.item);
 
         }
 
@@ -64,6 +64,7 @@ namespace MechanoAdaptiveGeneration
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+
             //get all the data and assign to pointers
             Mesh M = new Mesh();
             DA.GetData(0, ref M);
@@ -86,7 +87,8 @@ namespace MechanoAdaptiveGeneration
             List<int> FixedPointIndices = new List<int>();
             DA.GetDataList(9, FixedPointIndices);
             int maxIterations = new int();
-            DA.GetData(10, ref maxIterations);
+            DA.GetData<int>(10, ref maxIterations);
+            
 
             //Set up the outputs - the DA.SetData is at the end
             double percentVolPacked = new double();
@@ -473,6 +475,7 @@ namespace MechanoAdaptiveGeneration
             DA.SetData(4, Iterations);
             DA.SetData(5, Lines);
             DA.SetData(6, bakeResult);
+            
         }
 
         /// <summary>
