@@ -10,6 +10,44 @@ namespace MechanoAdaptiveGeneration
 {
     public class GenerationComponent : GH_Component
     {
+        private bool Running;
+        bool isInitialized = false;
+        //the script below the grey line
+        KangarooSolver.PhysicalSystem PS;
+
+        List<IGoal> GoalList;
+
+        List<Ellipsoid> Ellipsoids;
+        
+        double scaleEllipsoids;
+        double ev1mean;
+        double ev1stdev;
+        double ev1max;
+        double ev1min;
+
+        List<Line> LineList = new List<Line>();
+
+        int count;
+        int updateInterval;
+        double[] recentVolumeFillingErrors;
+
+        List<Vector3d> Evec1;
+        List<Vector3d> Evec2;
+        List<Vector3d> Evec3;
+        
+        List<double> Eval1;
+        List<double> Eval2;
+        List<double> Eval3;
+
+        List<double> localData;
+
+        List<Vector3d> La;
+        List<Vector3d> Sa;
+
+        //Gridpoints and tensors there
+        BackGroundData backGroundData;
+        StressTensor[,,] grid;
+
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
         /// constructor without any arguments.
@@ -100,45 +138,6 @@ namespace MechanoAdaptiveGeneration
             List<Line> Lines = new List<Line>();
 
 
-            //the script below the grey line  
-            KangarooSolver.PhysicalSystem PS = new KangarooSolver.PhysicalSystem();
-            bool isInitialized = false;
-
-            List<IGoal> GoalList = new List<IGoal>();
-
-            List<Ellipsoid> Ellipsoids = new List<Ellipsoid>();
-
-            //set to zero so they are assigned.
-            double scaleEllipsoids = 0;
-            double ev1mean = 0;
-            double ev1stdev = 0;
-            double ev1max = 0;
-            double ev1min = 0;
-
-            List<Line> LineList = new List<Line>();
-
-            bool Running;
-            int count = 0;
-            int updateInterval = 10;
-            double[] recentVolumeFillingErrors = new double[10];
-
-            List<Vector3d> Evec1 = new List<Vector3d>();
-            List<Vector3d> Evec2 = new List<Vector3d>();
-            List<Vector3d> Evec3 = new List<Vector3d>();
-
-            List<double> Eval1 = new List<double>();
-            List<double> Eval2 = new List<double>();
-            List<double> Eval3 = new List<double>();
-
-            List<double> localData = new List<double>();
-
-            List<Vector3d> La = new List<Vector3d>();
-            List<Vector3d> Sa = new List<Vector3d>();
-
-            //Gridpoints and tensors there
-            BackGroundData backGroundData = new BackGroundData();
-            StressTensor[,,] grid = new StressTensor[0, 0, 0];
-
             //the original start of the run script
             int numberOfOptionSets = inputOptions.Count / 9;
             var meshVolumeProperties = VolumeMassProperties.Compute(M);
@@ -159,6 +158,41 @@ namespace MechanoAdaptiveGeneration
 
                 if (Reset || !isInitialized)
                 {
+                    PS = new KangarooSolver.PhysicalSystem();
+                    GoalList = new List<IGoal>();
+                    Ellipsoids = new List<Ellipsoid>();
+
+                    //set to zero so they are assigned.
+                    scaleEllipsoids = 0;
+                    ev1mean = 0;
+                    ev1stdev = 0;
+                    ev1max = 0;
+                    ev1min = 0;
+
+                    LineList = new List<Line>();
+
+                    count = 0;
+                    updateInterval = 1;
+                    recentVolumeFillingErrors = new double[10];
+                  
+
+                    Eval1 = new List<double>();
+                    Eval2 = new List<double>();
+                    Eval3 = new List<double>();
+
+                    Evec1 = new List<Vector3d>();
+                    Evec2 = new List<Vector3d>();
+                    Evec3 = new List<Vector3d>();
+
+                    localData = new List<double>();
+
+                    La = new List<Vector3d>();
+                    Sa = new List<Vector3d>();
+
+                    //Gridpoints and tensors there
+                    backGroundData = new BackGroundData();
+                    grid = new StressTensor[0, 0, 0];
+
                     Running = false;
                     bakeResult = false;
                     PS.ClearParticles();
@@ -168,14 +202,6 @@ namespace MechanoAdaptiveGeneration
                     GoalList.Clear();
                     Ellipsoids.Clear();
                     LineList.Clear();
-
-                    Evec1.Clear();
-                    Evec2.Clear();
-                    Evec3.Clear();
-
-                    Eval1.Clear();
-                    Eval2.Clear();
-                    Eval3.Clear();
 
                     localData.Clear();
                     localData = Data;
@@ -256,6 +282,7 @@ namespace MechanoAdaptiveGeneration
                     //EnergySum = double.MaxValue;
 
                     isInitialized = true;
+                    Running = Run;
                 }
                 else
                 {
@@ -403,7 +430,7 @@ namespace MechanoAdaptiveGeneration
                     }
 
                     //Output the mesh, and how many iterations it took to converge
-                    EllipsoidCenters = (List<Point3d>) PS.GetPositions();
+                    EllipsoidCenters = PS.GetPositions().ToList();
 
                     LongAxes = La;
                     ShortAxes = Sa;
@@ -412,7 +439,7 @@ namespace MechanoAdaptiveGeneration
                     if (count > maxIterations / 10)
                     {
                         double averageFillingError = recentVolumeFillingErrors.ToList().Average();
-                        if (averageFillingError < 0.01 || count > maxIterations)
+                        if (averageFillingError < 0.0001 || count > maxIterations)
                         {
                             Running = false;
                             bakeResult = true;
@@ -476,6 +503,25 @@ namespace MechanoAdaptiveGeneration
             DA.SetData(5, Lines);
             DA.SetData(6, bakeResult);
             
+        }
+
+        /// <summary>
+        /// Use this to 
+        /// </summary>
+        protected override void AfterSolveInstance()
+        {
+            if (Running)
+            {
+                GH_Document doc = OnPingDocument();
+                GH_Document.GH_ScheduleDelegate callback = new GH_Document.GH_ScheduleDelegate(ScheduleCallback);
+                doc.ScheduleSolution(1, callback);
+            }
+        }
+        
+
+        private void ScheduleCallback(GH_Document doc)
+        {
+            ExpireSolution(false);
         }
 
         /// <summary>
