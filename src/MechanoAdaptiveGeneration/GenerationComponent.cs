@@ -137,7 +137,6 @@ namespace MechanoAdaptiveGeneration
             List<Vector3d> ShortAxes = new List<Vector3d>();
             List<Line> Lines = new List<Line>();
 
-
             //the original start of the run script
             int numberOfOptionSets = inputOptions.Count / 9;
             var meshVolumeProperties = VolumeMassProperties.Compute(M);
@@ -172,7 +171,7 @@ namespace MechanoAdaptiveGeneration
                     LineList = new List<Line>();
 
                     count = 0;
-                    updateInterval = 1;
+                    updateInterval = 2;
                     recentVolumeFillingErrors = new double[10];
                   
 
@@ -218,9 +217,6 @@ namespace MechanoAdaptiveGeneration
                     ev1max = ev1mean + 2 * ev1stdev;
                     ev1min = ev1mean - 2 * ev1stdev;
 
-                    //ev1max = ev1mean * 1.5;
-                    //ev1min = ev1mean * 0.5;
-                    
                     var ix = new List<int>();
 
                     if (Evec1 != null && Evec2 != null && Evec3 != null || true)
@@ -232,7 +228,6 @@ namespace MechanoAdaptiveGeneration
                             Ellipsoids.Add(new Ellipsoid(Pts[i]));
 
                             //translate these values to rs and rl
-
                             double ClampEval = Math.Max(Eval1[i], ev1min);
                             ClampEval = Math.Min(ClampEval, ev1max);
 
@@ -240,9 +235,6 @@ namespace MechanoAdaptiveGeneration
 
                             double effectiveLongAxisLength = minLongAxisLength + (1 - evParam) * (maxLongAxisLength - minLongAxisLength);
 
-                            // double effectiveLongAxisLength = minLongAxisLength + (Eval1[i] - ev1max) / (ev1min - ev1max) * (maxLongAxisLength - minLongAxisLength);
-
-                            //   effectiveLongAxisLength = Math.Max(Math.Min(Math.Abs(effectiveLongAxisLength), maxLongAxisLength / scaleEllipsoids), minLongAxisLength / scaleEllipsoids);
                             La.Add(scaleEllipsoids * effectiveLongAxisLength * Evec1[i]);
 
                             //double ratio = Math.Max(Math.Min(Math.Abs(Eval2[i]), maxLongAxisLength / scaleEllipsoids) / effectiveLongAxisLength, minSlenderness);
@@ -265,7 +257,7 @@ namespace MechanoAdaptiveGeneration
                             sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * a * b * b / 3.0;
                         }
                     }
-
+                    
                     GoalList.Add(new KangarooSolver.Goals.SolidPoint(ix, M, true, BoundaryCollideStrength));
 
                     //plastic anchor for stopping circulation
@@ -313,11 +305,8 @@ namespace MechanoAdaptiveGeneration
                                 double evParam = (ClampEval - ev1min) / (ev1max - ev1min);
                                 double effectiveLongAxisLength = minLongAxisLength + (1 - evParam) * (maxLongAxisLength - minLongAxisLength);
 
-                                // double effectiveLongAxisLength = minLongAxisLength + (Eval1[i] - ev1max) / (ev1min - ev1max) * (maxLongAxisLength - minLongAxisLength);
-                                //   effectiveLongAxisLength = Math.Max(Math.Min(Math.Abs(effectiveLongAxisLength), maxLongAxisLength / scaleEllipsoids), minLongAxisLength / scaleEllipsoids);
                                 La[i] = scaleEllipsoids * effectiveLongAxisLength * Evec1[i];
-
-                                //double ratio = Math.Max(Math.Min(Math.Abs(Eval2[i]), maxLongAxisLength / scaleEllipsoids) / effectiveLongAxisLength, minSlenderness);
+                                
                                 double ratio = Math.Max(minSlenderness, Eval2[i] / Eval1[i]);
 
                                 Sa[i] = scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i];
@@ -354,11 +343,9 @@ namespace MechanoAdaptiveGeneration
                     List<int> CollideRef1 = new List<int>();
 
                     //use SAP to find AABB collisions
-
                     HelperFunctions.SweepAndPrune(Ellipsoids, Positions, ref CollideRef0, ref CollideRef1);
 
                     //narrow phase collision
-
                     var ConnectedEdges = new List<int>[Positions.Length];
                     for (int i = 0; i < Positions.Length; i++)
                     {
@@ -375,24 +362,11 @@ namespace MechanoAdaptiveGeneration
 
                         if (PushDistance != -1)
                         {
-                            //GoalList.Add(new KangarooSolver.Goals.Spring(eb, ea, PushDistance, 1));
-
                             GoalList.Add(new customK2goals.NonLinearRepel(eb, ea, PushDistance, 1, 0.01, -2));
 
                             Line L = new Line(Positions[ea], Positions[eb]);
 
-                            GoalList.Add(new Align(eb, ea, new Vector3d[3]
-                              {
-              0.5 * (Ellipsoids[ea].unitXAxis + Ellipsoids[eb].unitXAxis),
-              0.5 * (Ellipsoids[ea].unitYAxis + Ellipsoids[eb].unitYAxis),
-              0.5 * (Ellipsoids[ea].unitZAxis + Ellipsoids[eb].unitZAxis),
-                              }, AlignStrength));
-
-                            //
-                            //          if(PushDistance > EdgeLengthFactor)
-                            //          {
-                            //            LineList.Add(L);
-                            //          }
+                            GoalList.Add(new Align(eb, ea, new Vector3d[3] {0.5 * (Ellipsoids[ea].unitXAxis + Ellipsoids[eb].unitXAxis),0.5 * (Ellipsoids[ea].unitYAxis + Ellipsoids[eb].unitYAxis),0.5 * (Ellipsoids[ea].unitZAxis + Ellipsoids[eb].unitZAxis)}, AlignStrength));
 
                             double LLen = L.Length;
 
@@ -402,31 +376,20 @@ namespace MechanoAdaptiveGeneration
                                 ConnectedEdges[ea].Add(LineList.Count - 1);
                                 ConnectedEdges[eb].Add(LineList.Count - 1);
                             }
-
-                            //
-                            //          if((PushDistance - LLen) > EdgeLengthFactor)
-                            //          {
-                            //            LineList.Add(L);
-                            //          }
-
-
+                            
                             if (!Double.IsNaN(PushDistance))
                             {
                                 totalOverlap = totalOverlap + 2 * Math.Abs(PushDistance);
                             }
                         }
                     }
-
-                    //create spring forces and add to goals
-                    //for all pairs colliding, also add alignment
-
+                    
                     PS.SimpleStep(GoalList);
 
                     //comment out the scaling method you don't want
                     if (UpdateScale && count % updateInterval == 1)
                     {
                         HelperFunctions.updateScaleByVolume(ref scaleEllipsoids, ref sumOfCurrentEllipsoidVolumes, ref Ellipsoids, ref meshVolume);
-                        //updateScaleByPressure(ref scaleEllipsoids, ref totalOverlap, ref Ellipsoids, ref targetPressure);
                     }
 
                     //Output the mesh, and how many iterations it took to converge
@@ -448,7 +411,6 @@ namespace MechanoAdaptiveGeneration
 
                     Iterations = count;
 
-
                     //optional post-packing connectivity culling
                     if (ValenceFilter)
                     {
@@ -457,7 +419,8 @@ namespace MechanoAdaptiveGeneration
                         {
                             int CurrentValence = ConnectedEdges[i].Count;
                             var EdgeIndices = new int[CurrentValence];
-                            int TargetValence = 6;// TODO: Replace this for boundary faces/edges
+                            // TODO: Replace this for boundary faces/edges
+                            int TargetValence = 6;
 
                             var EdgeLengths = new double[CurrentValence];
 
@@ -518,7 +481,6 @@ namespace MechanoAdaptiveGeneration
             }
         }
         
-
         private void ScheduleCallback(GH_Document doc)
         {
             ExpireSolution(false);

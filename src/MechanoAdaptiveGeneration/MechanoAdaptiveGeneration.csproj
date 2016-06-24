@@ -52,7 +52,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="KangarooSolver">
-      <HintPath>..\..\lib\KangarooSolver.dll</HintPath>
+      <HintPath>..\..\..\..\..\Dropbox\grasshopperComponents\K2\KangarooSolver.dll</HintPath>
     </Reference>
     <Reference Include="RhinoCommon">
       <HintPath>..\..\lib\RhinoCommon.dll</HintPath>
