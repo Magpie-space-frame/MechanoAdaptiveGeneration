@@ -218,7 +218,7 @@ namespace MechanoAdaptiveGeneration
 
                   var CoordsInCell = new Point3d();
 
-                  if (PX < 0)
+                  if (PX < 0)   // this will cause problems if our data has points with negative coordinates!
                   {
                       PXF = 0; PXC = 1; CoordsInCell.X = 0;
                   }
