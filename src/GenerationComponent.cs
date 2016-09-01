@@ -18,7 +18,7 @@ namespace MechanoAdaptiveGeneration
         List<IGoal> GoalList;
 
         List<Ellipsoid> Ellipsoids;
-        
+
         double scaleEllipsoids;
         double ev1mean;
         double ev1stdev;
@@ -34,7 +34,7 @@ namespace MechanoAdaptiveGeneration
         List<Vector3d> Evec1;
         List<Vector3d> Evec2;
         List<Vector3d> Evec3;
-        
+
         List<double> Eval1;
         List<double> Eval2;
         List<double> Eval3;
@@ -129,7 +129,7 @@ namespace MechanoAdaptiveGeneration
             DA.GetData<int>(10, ref maxIterations);
             double volumeFactor = new double();
             DA.GetData<double>(11, ref volumeFactor);
-            
+
 
             //Set up the outputs - the DA.SetData is at the end
             double percentVolPacked = new double();
@@ -142,7 +142,7 @@ namespace MechanoAdaptiveGeneration
             List<Line> Lines = new List<Line>();
 
             //the original start of the run script
- 
+
             double minLongAxisLength = inputOptions[0];
             double maxLongAxisLength = inputOptions[1];
             double minSlenderness = inputOptions[2];
@@ -176,7 +176,7 @@ namespace MechanoAdaptiveGeneration
                 count = 0;
                 updateInterval = 5;
                 recentVolumeFillingErrors = new double[10];
-                  
+
 
                 Eval1 = new List<double>();
                 Eval2 = new List<double>();
@@ -212,7 +212,7 @@ namespace MechanoAdaptiveGeneration
                 La.Clear();
                 Sa.Clear();
 
-                HelperFunctions.InterpolateTensor(Pts.ToArray(), ref Evec1, ref Evec2, ref Evec3, ref Eval1, ref Eval2, ref Eval3,grid,backGroundData);
+                HelperFunctions.InterpolateTensor(Pts.ToArray(), ref Evec1, ref Evec2, ref Evec3, ref Eval1, ref Eval2, ref Eval3, grid, backGroundData);
 
                 //ellipsoid size is in range mean(ev1) +- 2 stdDev(ev1)
                 ev1mean = Eval1.Average();
@@ -222,7 +222,7 @@ namespace MechanoAdaptiveGeneration
 
                 var ix = new List<int>();
 
-                if (Evec1 != null && Evec2 != null && Evec3 != null || true)
+                if (Evec1 != null && Evec2 != null && Evec3 != null)
                 {
                     for (int i = 0; i < Pts.Count; i++)
                     {
@@ -260,13 +260,13 @@ namespace MechanoAdaptiveGeneration
                         sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * a * b * b / 3.0;
                     }
                 }
-                    
+
                 GoalList.Add(new KangarooSolver.Goals.SolidPoint(ix, M, true, BoundaryCollideStrength));
 
                 //plastic anchor for stopping circulation
                 for (int i = 0; i < Pts.Count; i++)
                 {
-                    GoalList.Add(new customK2goals.AnchorPlastic(i, Pts[i], plasticdrag, 1000));
+                    GoalList.Add(new customK2goals.AnchorPlastic(i, Pts[i], plasticdrag, 0));
                 }
 
                 for (int i = 0; i < FixedPointIndices.Count(); i++)
@@ -293,14 +293,18 @@ namespace MechanoAdaptiveGeneration
                 }
 
                 int GoalsToKeep = 1 + Pts.Count + FixedPointIndices.Count(); //Note that if more goals are added in the in the initialization, this number should be increased accordingly
-                GoalList.RemoveRange(GoalsToKeep, GoalList.Count - GoalsToKeep); //clear everything apart from the SolidPoint Goal.
+                GoalList.RemoveRange(GoalsToKeep, GoalList.Count - GoalsToKeep); //clear everything apart from the SolidPoint Goal, the plastic drag goals and the fixed point goals 
 
                 (GoalList[0] as KangarooSolver.Goals.SolidPoint).Strength = BoundaryCollideStrength;
 
                 var Positions = PS.GetPositionArray();
+                if (count % updateInterval == 1)
+                {
+                    HelperFunctions.InterpolateTensor(Positions, ref Evec1, ref Evec2, ref Evec3, ref Eval1, ref Eval2, ref Eval3, grid, backGroundData);
+                }
 
                 for (int i = 0; i < Positions.Count(); i++)
-                    if (Evec1 != null && Evec2 != null && Evec3 != null || true)
+                    if (Evec1 != null && Evec2 != null && Evec3 != null)
                     {
                         {
                             double ClampEval = Math.Max(Eval1[i], ev1min);
@@ -309,7 +313,7 @@ namespace MechanoAdaptiveGeneration
                             double effectiveLongAxisLength = minLongAxisLength + (1 - evParam) * (maxLongAxisLength - minLongAxisLength);
 
                             La[i] = scaleEllipsoids * effectiveLongAxisLength * Evec1[i];
-                                
+
                             double ratio = Math.Max(minSlenderness, Eval2[i] / Eval1[i]);
 
                             Sa[i] = scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i];
@@ -328,19 +332,22 @@ namespace MechanoAdaptiveGeneration
                             double b = scaleEllipsoids * ratio * effectiveLongAxisLength;
                             sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * a * b * b / 3.0;
                         }
-
-                        if (count % updateInterval == 1)
-                        {
-                            //update the ellipsoid transformations from field
-                            double currentVolumeFillingError = Math.Abs(targetVolumeToFill - sumOfCurrentEllipsoidVolumes);
-                            int numberOfInterpolations = (int)Math.Floor((double)count / updateInterval);
-                            recentVolumeFillingErrors[(int)(numberOfInterpolations % 10)] = currentVolumeFillingError;
-                            HelperFunctions.InterpolateTensor(Positions, ref Evec1, ref Evec2, ref Evec3, ref Eval1, ref Eval2, ref Eval3,grid,backGroundData);
-                        }
                     }
 
-                percentVolPacked = sumOfCurrentEllipsoidVolumes / (volumeFactor*meshVolume);
-               
+                if (count % updateInterval == 1)
+                {
+                    //update the ellipsoid transformations from field
+                    double currentVolumeFillingError = Math.Abs(targetVolumeToFill - sumOfCurrentEllipsoidVolumes);
+                    int numberOfInterpolations = (int)Math.Floor((double)count / updateInterval);
+                    recentVolumeFillingErrors[(int)(numberOfInterpolations % 10)] = currentVolumeFillingError;
+                    if (UpdateScale)
+                    {
+                        HelperFunctions.updateScaleByVolume(ref scaleEllipsoids, ref sumOfCurrentEllipsoidVolumes, ref Ellipsoids, ref targetVolumeToFill);
+                    }
+                }
+
+                percentVolPacked = sumOfCurrentEllipsoidVolumes / (volumeFactor * meshVolume);
+
                 //A pair of matching lists to contain the collisions
                 List<int> CollideRef0 = new List<int>();
                 List<int> CollideRef1 = new List<int>();
@@ -369,7 +376,7 @@ namespace MechanoAdaptiveGeneration
 
                         Line L = new Line(Positions[ea], Positions[eb]);
 
-                        GoalList.Add(new Align(eb, ea, new Vector3d[3] {0.5 * (Ellipsoids[ea].unitXAxis + Ellipsoids[eb].unitXAxis),0.5 * (Ellipsoids[ea].unitYAxis + Ellipsoids[eb].unitYAxis),0.5 * (Ellipsoids[ea].unitZAxis + Ellipsoids[eb].unitZAxis)}, AlignStrength));
+                        GoalList.Add(new Align(eb, ea, new Vector3d[3] { 0.5 * (Ellipsoids[ea].unitXAxis + Ellipsoids[eb].unitXAxis), 0.5 * (Ellipsoids[ea].unitYAxis + Ellipsoids[eb].unitYAxis), 0.5 * (Ellipsoids[ea].unitZAxis + Ellipsoids[eb].unitZAxis) }, AlignStrength));
 
                         double LLen = L.Length;
 
@@ -379,21 +386,16 @@ namespace MechanoAdaptiveGeneration
                             ConnectedEdges[ea].Add(LineList.Count - 1);
                             ConnectedEdges[eb].Add(LineList.Count - 1);
                         }
-                            
+
                         if (!Double.IsNaN(PushDistance))
                         {
                             totalOverlap = totalOverlap + 2 * Math.Abs(PushDistance);
                         }
                     }
                 }
-                    
+
                 PS.SimpleStep(GoalList);
 
-                //rescale ellipsoids if required and we've reached the end of the update interval
-                if (UpdateScale && count % updateInterval == 1)
-                {
-                    HelperFunctions.updateScaleByVolume(ref scaleEllipsoids, ref sumOfCurrentEllipsoidVolumes, ref Ellipsoids, ref targetVolumeToFill);
-                }
 
                 //Output the mesh, and how many iterations it took to converge
                 EllipsoidCenters = PS.GetPositions().ToList();
@@ -460,7 +462,7 @@ namespace MechanoAdaptiveGeneration
                     Lines = LineList;
                 }
             }
-            
+
 
             //set the outputs
             DA.SetData(0, percentVolPacked);
@@ -485,7 +487,7 @@ namespace MechanoAdaptiveGeneration
                 doc.ScheduleSolution(1, callback);
             }
         }
-        
+
         private void ScheduleCallback(GH_Document doc)
         {
             ExpireSolution(false);

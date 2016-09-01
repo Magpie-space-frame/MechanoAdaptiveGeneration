@@ -31,11 +31,9 @@ namespace MechanoAdaptiveGeneration
         public static void updateScaleByVolume(ref double scale, ref double totalEllipsoidVolume, ref List<Ellipsoid> ellis, ref double meshVol)
         {
             double targetEllipsoidVolume = meshVol;
-            scale = scale * Math.Pow(targetEllipsoidVolume / totalEllipsoidVolume, 1.0 / 3.0);
-            for (int i = 0; i < ellis.Count(); i++)
-            {
-                ellis[i].scale(scale);
-            }
+            double fullScale = scale * Math.Pow(targetEllipsoidVolume / totalEllipsoidVolume, 1.0 / 3.0);
+            double currentScale = scale;
+            scale = 0.5 * currentScale + 0.5 * fullScale;
         }
 
         public static void processData(List<double> dataToProcess, ref BackGroundData backGroundData, ref StressTensor[,,] grid)
@@ -46,8 +44,8 @@ namespace MechanoAdaptiveGeneration
             backGroundData.T2 = new List<double>();
             backGroundData.T3 = new List<double>();
             backGroundData.T4 = new List<double>();
-            backGroundData.T5= new List<double>();
-                                     
+            backGroundData.T5 = new List<double>();
+
             while (dataToProcess.Any())
             {
                 List<double> localDataList = dataToProcess.Take(9).ToList();
@@ -191,6 +189,16 @@ namespace MechanoAdaptiveGeneration
             var EigenValuesB = new double[nOfPoints];
             var EigenValuesC = new double[nOfPoints];
 
+            if (Evec1.Count > 0)
+            {
+                EVA = Evec1.ToArray();
+                EVB = Evec2.ToArray();
+                EVC = Evec3.ToArray();
+                EigenValuesA = Eval1.ToArray();
+                EigenValuesB = Eval2.ToArray();
+                EigenValuesC = Eval3.ToArray();
+            }
+
             // for each point in P, find its coordinates in the grid
             // output the 8 points/indices of the corners
             // and the point coordinates of the position within that cell
@@ -218,7 +226,7 @@ namespace MechanoAdaptiveGeneration
 
                   var CoordsInCell = new Point3d();
 
-                  if (PX < 0)   // this will cause problems if our data has points with negative coordinates!
+                  if (PX < 0)
                   {
                       PXF = 0; PXC = 1; CoordsInCell.X = 0;
                   }
@@ -309,24 +317,28 @@ namespace MechanoAdaptiveGeneration
                   //var T = new Double[3]{0.5,0.5,0.5};
 
                   //THIS IS WHERE THE ACTUAL EIGENVALUE PROBLEM IS SOLVED
-                  StressTensor tensorAtPoint = TriLinearInterpolate(Corners, T);
-                  EigenSolve(tensorAtPoint.Values, out EVal, out EVec);
+                  StressTensor tensorAtPoint = new StressTensor();
+                  bool isValid = TriLinearInterpolate(ref tensorAtPoint, Corners, T);
+                  if (isValid)
+                  {
+                      EigenSolve(tensorAtPoint.Values, out EVal, out EVec);
 
-                  int[] ott = new int[3]; // o ne, t wo, t hree
-                  ott[0] = 0;
-                  ott[1] = 1;
-                  ott[2] = 2;
-                  double[] ev = new double[] { Math.Abs(EVal[0]), Math.Abs(EVal[1]), Math.Abs(EVal[2]) };
-                  //sort according to maximum absolute value of Eval
-                  Array.Sort(ev, ott);
+                      int[] ott = new int[3]; // o ne, t wo, t hree
+                      ott[0] = 0;
+                      ott[1] = 1;
+                      ott[2] = 2;
+                      double[] ev = new double[] { Math.Abs(EVal[0]), Math.Abs(EVal[1]), Math.Abs(EVal[2]) };
+                      //sort according to maximum absolute value of Eval
+                      Array.Sort(ev, ott);
 
-                  EVA[j] = EVec[ott[2]];
-                  EVB[j] = EVec[ott[1]];
-                  EVC[j] = EVec[ott[0]];
+                      EVA[j] = EVec[ott[2]];
+                      EVB[j] = EVec[ott[1]];
+                      EVC[j] = EVec[ott[0]];
 
-                  EigenValuesA[j] = Math.Abs(EVal[ott[2]]);
-                  EigenValuesB[j] = Math.Abs(EVal[ott[1]]);
-                  EigenValuesC[j] = Math.Abs(EVal[ott[0]]);
+                      EigenValuesA[j] = Math.Abs(EVal[ott[2]]);
+                      EigenValuesB[j] = Math.Abs(EVal[ott[1]]);
+                      EigenValuesC[j] = Math.Abs(EVal[ott[0]]);
+                  }
               });
 
             Evec1 = EVA.ToList();
@@ -343,9 +355,9 @@ namespace MechanoAdaptiveGeneration
         /// </summary>
         /// <param name="CornerTensors">Tensor values at the corners, ordered 000,001,010,011,100,101,110,111</param>
         /// <param name="T">3 numbers in the range 0 to 1</param>
-        /// <returns>the interpolated stress tensor at the given coordinates</returns>
+        /// <returns>boolean determining validity of interpolated stress tensor and sets the interpolated stress tensor at the given coordinates</returns>
         ///
-        public static StressTensor TriLinearInterpolate(StressTensor[] CornerTensors, double[] T)
+        public static bool TriLinearInterpolate(ref StressTensor tAtP, StressTensor[] CornerTensors, double[] T)
         {
             //first get the 4 values along the edges in the x direction
             StressTensor SX0 = LinearInterpolate(CornerTensors[0], CornerTensors[4], T[0]);
@@ -364,14 +376,16 @@ namespace MechanoAdaptiveGeneration
             {
                 if (Double.IsNaN(ST.Values[i])) { HasNaN = true; }
             }
+
             if (!HasNaN)
             {
-                return LinearInterpolate(SY0, SY1, T[2]);
+                tAtP = ST;
+                return true;
             }
             else
             {
-                //if NaN then send in a large number..
-                return new StressTensor(new List<double> { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 });
+                //if NaN return false and invalid stress tensor...
+                return false;
             }
 
         }
@@ -379,15 +393,16 @@ namespace MechanoAdaptiveGeneration
         public static StressTensor LinearInterpolate(StressTensor TensorA, StressTensor TensorB, double T)
         {
             var Interp = new StressTensor();
-            int NaNorZeroCount = 0;
             for (int i = 0; i < 9; i++)
             {
+                int NaNorZeroCount = 0;
                 Interp.Values[i] = 0;
                 if (!Double.IsNaN(TensorA.Values[i]))
                 {
                     Interp.Values[i] += (1 - T) * TensorA.Values[i];
                 }
-                else {
+                else
+                {
                     Interp.Values[i] += (1 - T) * TensorB.Values[i];
                     NaNorZeroCount++;
                 }
@@ -395,7 +410,8 @@ namespace MechanoAdaptiveGeneration
                 {
                     Interp.Values[i] += T * TensorB.Values[i];
                 }
-                else {
+                else
+                {
                     Interp.Values[i] += T * TensorA.Values[i];
                     NaNorZeroCount++;
                 }
