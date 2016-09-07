@@ -7,8 +7,13 @@ using System.Threading.Tasks;
 
 namespace MechanoAdaptiveGeneration
 {
-    class HelperFunctions
+    public class HelperFunctions
     {
+        /// <summary>
+        /// bla bla blah
+        /// </summary>
+        /// <param name="values">bla bla</param>
+        /// <returns></returns>
         public static double StdDev(ref List<double> values)
         {
             double ret = 0;
@@ -28,15 +33,17 @@ namespace MechanoAdaptiveGeneration
         }
 
         //evaluate % total volume taken up by ellipsoids, and correct the scaling factor if needed
-        public static void updateScaleByVolume(ref double scale, ref double totalEllipsoidVolume, ref List<Ellipsoid> ellis, ref double meshVol)
+        public static void UpdateScaleByVolume(ref double scale, ref double totalEllipsoidVolume, ref List<Ellipsoid> ellis, ref double meshVol)
         {
-            double targetEllipsoidVolume = meshVol;
-            double fullScale = scale * Math.Pow(targetEllipsoidVolume / totalEllipsoidVolume, 1.0 / 3.0);
-            double currentScale = scale;
-            scale = 0.5 * currentScale + 0.5 * fullScale;
+            double targetEllipsoidVolume = 1.8 * meshVol;
+            scale = scale * Math.Pow(targetEllipsoidVolume / totalEllipsoidVolume, 1.0 / 3.0);
+            for (int i = 0; i < ellis.Count(); i++)
+            {
+                ellis[i].Scale(scale);
+            }
         }
 
-        public static void processData(List<double> dataToProcess, ref BackGroundData backGroundData, ref StressTensor[,,] grid)
+        public static void ProcessData(List<double> dataToProcess, ref BackGroundData backGroundData, ref StressTensor[,,] grid)
         {
             backGroundData.G = new List<Point3d>();
             backGroundData.T0 = new List<double>();
@@ -44,8 +51,8 @@ namespace MechanoAdaptiveGeneration
             backGroundData.T2 = new List<double>();
             backGroundData.T3 = new List<double>();
             backGroundData.T4 = new List<double>();
-            backGroundData.T5 = new List<double>();
-
+            backGroundData.T5= new List<double>();
+                                     
             while (dataToProcess.Any())
             {
                 List<double> localDataList = dataToProcess.Take(9).ToList();
@@ -63,26 +70,26 @@ namespace MechanoAdaptiveGeneration
             }
 
             //find grid count and size
-            backGroundData.xCount = backGroundData.yCount = backGroundData.zCount = 0;
-            backGroundData.xSize = backGroundData.ySize = backGroundData.zSize = 0;
+            backGroundData.XCount = backGroundData.YCount = backGroundData.ZCount = 0;
+            backGroundData.XSize = backGroundData.YSize = backGroundData.ZSize = 0;
 
-            StressTensor[] Tensors = new StressTensor[backGroundData.G.Count];
+            StressTensor[] tensors = new StressTensor[backGroundData.G.Count];
             for (int i = 0; i < backGroundData.G.Count; i++)
             {
-                Tensors[i] = new StressTensor(new List<double> { backGroundData.T0[i], backGroundData.T1[i], backGroundData.T2[i], backGroundData.T1[i], backGroundData.T3[i], backGroundData.T4[i], backGroundData.T2[i], backGroundData.T4[i], backGroundData.T5[i] });
+                tensors[i] = new StressTensor(new List<double> { backGroundData.T0[i], backGroundData.T1[i], backGroundData.T2[i], backGroundData.T1[i], backGroundData.T3[i], backGroundData.T4[i], backGroundData.T2[i], backGroundData.T4[i], backGroundData.T5[i] });
             }
 
-            Array.Sort(backGroundData.G.ToArray(), Tensors);
+            Array.Sort(backGroundData.G.ToArray(), tensors);
             backGroundData.G.Sort();
 
-            backGroundData.zSize = backGroundData.G[1].Z - backGroundData.G[0].Z;
+            backGroundData.ZSize = backGroundData.G[1].Z - backGroundData.G[0].Z;
 
             for (int i = 1; i < backGroundData.G.Count; i++)
             {
                 if (backGroundData.G[i].Y > backGroundData.G[0].Y)
                 {
-                    backGroundData.ySize = backGroundData.G[i].Y - backGroundData.G[0].Y;
-                    backGroundData.zCount = i;
+                    backGroundData.YSize = backGroundData.G[i].Y - backGroundData.G[0].Y;
+                    backGroundData.ZCount = i;
                     break;
                 }
             }
@@ -91,113 +98,103 @@ namespace MechanoAdaptiveGeneration
             {
                 if (backGroundData.G[i].X > backGroundData.G[0].X)
                 {
-                    backGroundData.xSize = backGroundData.G[i].X - backGroundData.G[0].X;
-                    backGroundData.yCount = i / backGroundData.zCount;
+                    backGroundData.XSize = backGroundData.G[i].X - backGroundData.G[0].X;
+                    backGroundData.YCount = i / backGroundData.ZCount;
                     break;
                 }
             }
 
-            backGroundData.xCount = backGroundData.G.Count / (backGroundData.zCount * backGroundData.yCount);
+            backGroundData.XCount = backGroundData.G.Count / (backGroundData.ZCount * backGroundData.YCount);
 
-            grid = new StressTensor[backGroundData.xCount, backGroundData.yCount, backGroundData.zCount];
+            grid = new StressTensor[backGroundData.XCount, backGroundData.YCount, backGroundData.ZCount];
 
-            for (int i = 0; i < backGroundData.xCount; i++)
+            for (int i = 0; i < backGroundData.XCount; i++)
             {
-                for (int j = 0; j < backGroundData.yCount; j++)
+                for (int j = 0; j < backGroundData.YCount; j++)
                 {
-                    for (int k = 0; k < backGroundData.zCount; k++)
+                    for (int k = 0; k < backGroundData.ZCount; k++)
                     {
-                        grid[i, j, k] = Tensors[k + j * backGroundData.zCount + i * backGroundData.zCount * backGroundData.yCount];
+                        grid[i, j, k] = tensors[k + j * backGroundData.ZCount + i * backGroundData.ZCount * backGroundData.YCount];
                     }
                 }
             }
         }
 
-        public static void SweepAndPrune(List<Ellipsoid> Ellipsoids, Point3d[] Positions, ref List<int> CollideRef0, ref List<int> CollideRef1)
+        public static void SweepAndPrune(List<Ellipsoid> ellipsoids, Point3d[] positions, ref List<int> collideRef0, ref List<int> collideRef1)
         {
-            List<AABB> boxes = new List<AABB>();
+            List<Aabb> boxes = new List<Aabb>();
 
             //use the points to create AABB objects
-            for (int i = 0; i < Ellipsoids.Count; i++)
+            for (int i = 0; i < ellipsoids.Count; i++)
             {
-                Ellipsoids[i].position = Positions[i];
-                Ellipsoids[i].calculateBoundingBox();
+                ellipsoids[i].Position = positions[i];
+                ellipsoids[i].CalculateBoundingBox();
 
-                boxes.Add(new AABB(Ellipsoids[i].boundingBoxMin, Ellipsoids[i].boundingBoxMax, i));
+                boxes.Add(new Aabb(ellipsoids[i].BoundingBoxMin, ellipsoids[i].BoundingBoxMax, i));
             }
 
             List<EndPoint> sortedInX = new List<EndPoint>();
 
             //add the endpoints in x
-            foreach (AABB boxForPoint in boxes)
+            foreach (Aabb boxForPoint in boxes)
             {
-                sortedInX.Add(boxForPoint.min[0]);//change this 0 to 1 or 2 to sort in Y or Z - will also need to change the second half of the test function
-                sortedInX.Add(boxForPoint.max[0]);//change this 0 to 1 or 2 to sort in Y or Z
+                sortedInX.Add(boxForPoint.Min[0]);//change this 0 to 1 or 2 to sort in Y or Z - will also need to change the second half of the test function
+                sortedInX.Add(boxForPoint.Max[0]);//change this 0 to 1 or 2 to sort in Y or Z
             }
 
             //sort by the num value of each EndPoint
-            sortedInX.Sort(EndPoint.compareEndPoints);
+            sortedInX.Sort(EndPoint.CompareEndPoints);
 
             List<int> openBoxes = new List<int>();
 
             foreach (EndPoint endPoint in sortedInX)
             {
-                if (endPoint.isMin)
+                if (endPoint.IsMin)
                 {
-                    AABB thisPointOwner = endPoint.owner;
+                    Aabb thisPointOwner = endPoint.Owner;
                     //check against all in openBoxes
                     foreach (int openBoxRef in openBoxes)
                     {
                         //if it collides output the integers of the branches than collide
                         //do they collide in y?
-                        if (thisPointOwner.max[1].num > boxes[openBoxRef].min[1].num && thisPointOwner.min[1].num < boxes[openBoxRef].max[1].num)
+                        if (thisPointOwner.Max[1].Num > boxes[openBoxRef].Min[1].Num && thisPointOwner.Min[1].Num < boxes[openBoxRef].Max[1].Num)
                         {
                             //they collide in y, do they collide in z?
-                            if (thisPointOwner.max[2].num > boxes[openBoxRef].min[2].num && thisPointOwner.min[2].num < boxes[openBoxRef].max[2].num)
+                            if (thisPointOwner.Max[2].Num > boxes[openBoxRef].Min[2].Num && thisPointOwner.Min[2].Num < boxes[openBoxRef].Max[2].Num)
                             {
                                 //they collide in z
                                 //therefore they collide! Add to the list of collide refs
-                                CollideRef0.Add(endPoint.owner.branchRef);
-                                CollideRef1.Add(boxes[openBoxRef].branchRef);
+                                collideRef0.Add(endPoint.Owner.BranchRef);
+                                collideRef1.Add(boxes[openBoxRef].BranchRef);
                             }
                         }
                     }
                     //add corresponding box to openBoxes
-                    openBoxes.Add(thisPointOwner.branchRef);
+                    openBoxes.Add(thisPointOwner.BranchRef);
 
                 }
                 else
                 {
                     //it must be an max point
                     //remove corresponding box from openBoxes
-                    openBoxes.Remove(endPoint.owner.branchRef);
+                    openBoxes.Remove(endPoint.Owner.BranchRef);
                 }
             }
         }
 
-        public static void InterpolateTensor(Point3d[] Pts, ref List<Vector3d> Evec1, ref List<Vector3d> Evec2, ref List<Vector3d> Evec3, ref List<double> Eval1, ref List<double> Eval2, ref List<double> Eval3, StressTensor[,,] Grid, BackGroundData backGroundData)
+        public static void InterpolateTensor(Point3d[] pts, ref List<Vector3d> evec1, ref List<Vector3d> evec2, ref List<Vector3d> evec3, ref List<double> eval1, ref List<double> eval2, ref List<double> eval3, StressTensor[,,] grid, BackGroundData backGroundData)
         {
-            int nOfPoints = Pts.Count();
+            int nOfPoints = pts.Count();
 
-            var EigenVectors = new Vector3d[nOfPoints][];
-            var EigenValues = new Double[nOfPoints][];
+            var eigenVectors = new Vector3d[nOfPoints][];
+            var eigenValues = new Double[nOfPoints][];
 
-            var EVA = new Vector3d[nOfPoints];
-            var EVB = new Vector3d[nOfPoints];
-            var EVC = new Vector3d[nOfPoints];
-            var EigenValuesA = new double[nOfPoints];
-            var EigenValuesB = new double[nOfPoints];
-            var EigenValuesC = new double[nOfPoints];
-
-            if (Evec1.Count > 0)
-            {
-                EVA = Evec1.ToArray();
-                EVB = Evec2.ToArray();
-                EVC = Evec3.ToArray();
-                EigenValuesA = Eval1.ToArray();
-                EigenValuesB = Eval2.ToArray();
-                EigenValuesC = Eval3.ToArray();
-            }
+            var eva = new Vector3d[nOfPoints];
+            var evb = new Vector3d[nOfPoints];
+            var evc = new Vector3d[nOfPoints];
+            var eigenValuesA = new double[nOfPoints];
+            var eigenValuesB = new double[nOfPoints];
+            var eigenValuesC = new double[nOfPoints];
 
             // for each point in P, find its coordinates in the grid
             // output the 8 points/indices of the corners
@@ -216,55 +213,55 @@ namespace MechanoAdaptiveGeneration
             System.Threading.Tasks.Parallel.For(0, nOfPoints,
               j =>
               {
-                  var PVec = Pts[j] - backGroundData.G[0];  //position vector of the current point relative to grid origin
+                  var pVec = pts[j] - backGroundData.G[0];  //position vector of the current point relative to grid origin
 
-                  var PX = PVec.X / backGroundData.xSize;
-                  var PY = PVec.Y / backGroundData.ySize;
-                  var PZ = PVec.Z / backGroundData.zSize;
+                  var px = pVec.X / backGroundData.XSize;
+                  var py = pVec.Y / backGroundData.YSize;
+                  var pz = pVec.Z / backGroundData.ZSize;
 
-                  int PXF, PXC, PYF, PYC, PZF, PZC;
+                  int pxf, pxc, pyf, pyc, pzf, pzc;
 
-                  var CoordsInCell = new Point3d();
+                  var coordsInCell = new Point3d();
 
-                  if (PX < 0)
+                  if (px < 0)
                   {
-                      PXF = 0; PXC = 1; CoordsInCell.X = 0;
+                      pxf = 0; pxc = 1; coordsInCell.X = 0;
                   }
-                  else if (PX > backGroundData.xCount - 1)
+                  else if (px > backGroundData.XCount - 1)
                   {
-                      PXF = backGroundData.xCount - 2; PXC = backGroundData.xCount - 1; CoordsInCell.X = 1;
-                  }
-                  else
-                  {
-                      PXF = (int)Math.Floor(PX); PXC = (int)Math.Ceiling(PX); CoordsInCell.X = PX - PXF;
-                  }
-
-
-                  if (PY < 0)
-                  {
-                      PYF = 0; PYC = 1; CoordsInCell.Y = 0;
-                  }
-                  else if (PY > backGroundData.yCount - 1)
-                  {
-                      PYF = backGroundData.yCount - 2; PYC = backGroundData.yCount - 1; CoordsInCell.Y = 1;
+                      pxf = backGroundData.XCount - 2; pxc = backGroundData.XCount - 1; coordsInCell.X = 1;
                   }
                   else
                   {
-                      PYF = (int)Math.Floor(PY); PYC = (int)Math.Ceiling(PY); CoordsInCell.Y = PY - PYF;
+                      pxf = (int)Math.Floor(px); pxc = (int)Math.Ceiling(px); coordsInCell.X = px - pxf;
                   }
 
 
-                  if (PZ < 0)
+                  if (py < 0)
                   {
-                      PZF = 0; PZC = 1; CoordsInCell.Z = 0;
+                      pyf = 0; pyc = 1; coordsInCell.Y = 0;
                   }
-                  else if (PZ > backGroundData.zCount - 1)
+                  else if (py > backGroundData.YCount - 1)
                   {
-                      PZF = backGroundData.zCount - 2; PZC = backGroundData.zCount - 1; CoordsInCell.Z = 1;
+                      pyf = backGroundData.YCount - 2; pyc = backGroundData.YCount - 1; coordsInCell.Y = 1;
                   }
                   else
                   {
-                      PZF = (int)Math.Floor(PZ); PZC = (int)Math.Ceiling(PZ); CoordsInCell.Z = PZ - PZF;
+                      pyf = (int)Math.Floor(py); pyc = (int)Math.Ceiling(py); coordsInCell.Y = py - pyf;
+                  }
+
+
+                  if (pz < 0)
+                  {
+                      pzf = 0; pzc = 1; coordsInCell.Z = 0;
+                  }
+                  else if (pz > backGroundData.ZCount - 1)
+                  {
+                      pzf = backGroundData.ZCount - 2; pzc = backGroundData.ZCount - 1; coordsInCell.Z = 1;
+                  }
+                  else
+                  {
+                      pzf = (int)Math.Floor(pz); pzc = (int)Math.Ceiling(pz); coordsInCell.Z = pz - pzf;
                   }
 
 
@@ -279,173 +276,165 @@ namespace MechanoAdaptiveGeneration
 
                   //     arrayOfCellCoords[j] = new Point3d(Math.Min(Math.Max(PX - PXF, 0), 1), Math.Min(Math.Max(PY - PYF, 0), 1), Math.Min(Math.Max(PZ - PZF, 0), 1));
 
-                  arrayOfCellCoords[j] = CoordsInCell;
+                  arrayOfCellCoords[j] = coordsInCell;
 
-                  arrayOfTensors0[j] = Grid[PXF, PYF, PZF].Values;
-                  arrayOfTensors1[j] = Grid[PXF, PYF, PZC].Values;
-                  arrayOfTensors2[j] = Grid[PXF, PYC, PZF].Values;
-                  arrayOfTensors3[j] = Grid[PXF, PYC, PZC].Values;
-                  arrayOfTensors4[j] = Grid[PXC, PYF, PZF].Values;
-                  arrayOfTensors5[j] = Grid[PXC, PYF, PZC].Values;
-                  arrayOfTensors6[j] = Grid[PXC, PYC, PZF].Values;
-                  arrayOfTensors7[j] = Grid[PXC, PYC, PZC].Values;
+                  arrayOfTensors0[j] = grid[pxf, pyf, pzf].Values;
+                  arrayOfTensors1[j] = grid[pxf, pyf, pzc].Values;
+                  arrayOfTensors2[j] = grid[pxf, pyc, pzf].Values;
+                  arrayOfTensors3[j] = grid[pxf, pyc, pzc].Values;
+                  arrayOfTensors4[j] = grid[pxc, pyf, pzf].Values;
+                  arrayOfTensors5[j] = grid[pxc, pyf, pzc].Values;
+                  arrayOfTensors6[j] = grid[pxc, pyc, pzf].Values;
+                  arrayOfTensors7[j] = grid[pxc, pyc, pzc].Values;
 
-                  var Corners = new StressTensor[8];
+                  var corners = new StressTensor[8];
 
-                  Corners[0] = new StressTensor();
-                  Corners[1] = new StressTensor();
-                  Corners[2] = new StressTensor();
-                  Corners[3] = new StressTensor();
-                  Corners[4] = new StressTensor();
-                  Corners[5] = new StressTensor();
-                  Corners[6] = new StressTensor();
-                  Corners[7] = new StressTensor();
+                  corners[0] = new StressTensor();
+                  corners[1] = new StressTensor();
+                  corners[2] = new StressTensor();
+                  corners[3] = new StressTensor();
+                  corners[4] = new StressTensor();
+                  corners[5] = new StressTensor();
+                  corners[6] = new StressTensor();
+                  corners[7] = new StressTensor();
 
-                  Corners[0].Values = (double[])arrayOfTensors0[j];
-                  Corners[1].Values = (double[])arrayOfTensors1[j];
-                  Corners[2].Values = (double[])arrayOfTensors2[j];
-                  Corners[3].Values = (double[])arrayOfTensors3[j];
-                  Corners[4].Values = (double[])arrayOfTensors4[j];
-                  Corners[5].Values = (double[])arrayOfTensors5[j];
-                  Corners[6].Values = (double[])arrayOfTensors6[j];
-                  Corners[7].Values = (double[])arrayOfTensors7[j];
+                  corners[0].Values = (double[])arrayOfTensors0[j];
+                  corners[1].Values = (double[])arrayOfTensors1[j];
+                  corners[2].Values = (double[])arrayOfTensors2[j];
+                  corners[3].Values = (double[])arrayOfTensors3[j];
+                  corners[4].Values = (double[])arrayOfTensors4[j];
+                  corners[5].Values = (double[])arrayOfTensors5[j];
+                  corners[6].Values = (double[])arrayOfTensors6[j];
+                  corners[7].Values = (double[])arrayOfTensors7[j];
 
-                  var EVec = new Vector3d[3];
-                  var EVal = new Double[3];
+                  var eVec = new Vector3d[3];
+                  var eVal = new Double[3];
 
                   var T = new Double[3] { arrayOfCellCoords[j].X, arrayOfCellCoords[j].Y, arrayOfCellCoords[j].Z };
                   //var T = new Double[3]{0.5,0.5,0.5};
 
                   //THIS IS WHERE THE ACTUAL EIGENVALUE PROBLEM IS SOLVED
-                  StressTensor tensorAtPoint = new StressTensor();
-                  bool isValid = TriLinearInterpolate(ref tensorAtPoint, Corners, T);
-                  if (isValid)
-                  {
-                      EigenSolve(tensorAtPoint.Values, out EVal, out EVec);
+                  StressTensor tensorAtPoint = TriLinearInterpolate(corners, T);
+                  EigenSolve(tensorAtPoint.Values, out eVal, out eVec);
 
-                      int[] ott = new int[3]; // o ne, t wo, t hree
-                      ott[0] = 0;
-                      ott[1] = 1;
-                      ott[2] = 2;
-                      double[] ev = new double[] { Math.Abs(EVal[0]), Math.Abs(EVal[1]), Math.Abs(EVal[2]) };
-                      //sort according to maximum absolute value of Eval
-                      Array.Sort(ev, ott);
+                  int[] ott = new int[3]; // o ne, t wo, t hree
+                  ott[0] = 0;
+                  ott[1] = 1;
+                  ott[2] = 2;
+                  double[] ev = new double[] { Math.Abs(eVal[0]), Math.Abs(eVal[1]), Math.Abs(eVal[2]) };
+                  //sort according to maximum absolute value of Eval
+                  Array.Sort(ev, ott);
 
-                      EVA[j] = EVec[ott[2]];
-                      EVB[j] = EVec[ott[1]];
-                      EVC[j] = EVec[ott[0]];
+                  eva[j] = eVec[ott[2]];
+                  evb[j] = eVec[ott[1]];
+                  evc[j] = eVec[ott[0]];
 
-                      EigenValuesA[j] = Math.Abs(EVal[ott[2]]);
-                      EigenValuesB[j] = Math.Abs(EVal[ott[1]]);
-                      EigenValuesC[j] = Math.Abs(EVal[ott[0]]);
-                  }
+                  eigenValuesA[j] = Math.Abs(eVal[ott[2]]);
+                  eigenValuesB[j] = Math.Abs(eVal[ott[1]]);
+                  eigenValuesC[j] = Math.Abs(eVal[ott[0]]);
               });
 
-            Evec1 = EVA.ToList();
-            Evec2 = EVB.ToList();
-            Evec3 = EVC.ToList();
-            Eval1 = EigenValuesA.ToList();
-            Eval2 = EigenValuesB.ToList();
-            Eval3 = EigenValuesC.ToList();
+            evec1 = eva.ToList();
+            evec2 = evb.ToList();
+            evec3 = evc.ToList();
+            eval1 = eigenValuesA.ToList();
+            eval2 = eigenValuesB.ToList();
+            eval3 = eigenValuesC.ToList();
         }
 
         /// <summary>
         /// given stress tensors at the 8 corners of a cube, and coordinates of a point within that cube
         /// perform a trilinear interpolation
         /// </summary>
-        /// <param name="CornerTensors">Tensor values at the corners, ordered 000,001,010,011,100,101,110,111</param>
+        /// <param name="cornerTensors">Tensor values at the corners, ordered 000,001,010,011,100,101,110,111</param>
         /// <param name="T">3 numbers in the range 0 to 1</param>
-        /// <returns>boolean determining validity of interpolated stress tensor and sets the interpolated stress tensor at the given coordinates</returns>
+        /// <returns>the interpolated stress tensor at the given coordinates</returns>
         ///
-        public static bool TriLinearInterpolate(ref StressTensor tAtP, StressTensor[] CornerTensors, double[] T)
+        public static StressTensor TriLinearInterpolate(StressTensor[] cornerTensors, double[] T)
         {
             //first get the 4 values along the edges in the x direction
-            StressTensor SX0 = LinearInterpolate(CornerTensors[0], CornerTensors[4], T[0]);
-            StressTensor SX1 = LinearInterpolate(CornerTensors[1], CornerTensors[5], T[0]);
-            StressTensor SX2 = LinearInterpolate(CornerTensors[2], CornerTensors[6], T[0]);
-            StressTensor SX3 = LinearInterpolate(CornerTensors[3], CornerTensors[7], T[0]);
+            StressTensor sx0 = LinearInterpolate(cornerTensors[0], cornerTensors[4], T[0]);
+            StressTensor sx1 = LinearInterpolate(cornerTensors[1], cornerTensors[5], T[0]);
+            StressTensor sx2 = LinearInterpolate(cornerTensors[2], cornerTensors[6], T[0]);
+            StressTensor sx3 = LinearInterpolate(cornerTensors[3], cornerTensors[7], T[0]);
 
             //interpolate along Y
-            StressTensor SY0 = LinearInterpolate(SX0, SX2, T[1]);
-            StressTensor SY1 = LinearInterpolate(SX1, SX3, T[1]);
+            StressTensor sy0 = LinearInterpolate(sx0, sx2, T[1]);
+            StressTensor sy1 = LinearInterpolate(sx1, sx3, T[1]);
 
             //and finally along Z
-            var ST = LinearInterpolate(SY0, SY1, T[2]);
-            bool HasNaN = false;
+            var st = LinearInterpolate(sy0, sy1, T[2]);
+            bool hasNaN = false;
             for (int i = 0; i < 9; i++)
             {
-                if (Double.IsNaN(ST.Values[i])) { HasNaN = true; }
+                if (Double.IsNaN(st.Values[i])) { hasNaN = true; }
             }
-
-            if (!HasNaN)
+            if (!hasNaN)
             {
-                tAtP = ST;
-                return true;
+                return LinearInterpolate(sy0, sy1, T[2]);
             }
             else
             {
-                //if NaN return false and invalid stress tensor...
-                return false;
+                //if NaN then send in a large number..
+                return new StressTensor(new List<double> { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 });
             }
 
         }
 
-        public static StressTensor LinearInterpolate(StressTensor TensorA, StressTensor TensorB, double T)
+        public static StressTensor LinearInterpolate(StressTensor tensorA, StressTensor tensorB, double T)
         {
-            var Interp = new StressTensor();
+            var interp = new StressTensor();
+            int naNorZeroCount = 0;
             for (int i = 0; i < 9; i++)
             {
-                int NaNorZeroCount = 0;
-                Interp.Values[i] = 0;
-                if (!Double.IsNaN(TensorA.Values[i]))
+                interp.Values[i] = 0;
+                if (!Double.IsNaN(tensorA.Values[i]))
                 {
-                    Interp.Values[i] += (1 - T) * TensorA.Values[i];
+                    interp.Values[i] += (1 - T) * tensorA.Values[i];
                 }
-                else
-                {
-                    Interp.Values[i] += (1 - T) * TensorB.Values[i];
-                    NaNorZeroCount++;
+                else {
+                    interp.Values[i] += (1 - T) * tensorB.Values[i];
+                    naNorZeroCount++;
                 }
-                if (!Double.IsNaN(TensorB.Values[i]))
+                if (!Double.IsNaN(tensorB.Values[i]))
                 {
-                    Interp.Values[i] += T * TensorB.Values[i];
+                    interp.Values[i] += T * tensorB.Values[i];
                 }
-                else
-                {
-                    Interp.Values[i] += T * TensorA.Values[i];
-                    NaNorZeroCount++;
+                else {
+                    interp.Values[i] += T * tensorA.Values[i];
+                    naNorZeroCount++;
                 }
 
-                if (NaNorZeroCount == 2)
+                if (naNorZeroCount == 2)
                 {
-                    Interp.Values[i] = double.NaN;
+                    interp.Values[i] = double.NaN;
                 }
             }
 
-            return Interp;
+            return interp;
         }
 
-        public static void EigenSolve(double[] x, out double[] EigenValues, out Vector3d[] EigenVectors)
+        public static void EigenSolve(double[] x, out double[] eigenValues, out Vector3d[] eigenVectors)
         {
             double[,] matValues = new double[3, 3] { { x[0], x[1], x[2] }, { x[3], x[4], x[5] }, { x[6], x[7], x[8] } };
-            double[,] OutMatValues = new double[3, 3];
-            double[] OutVecValues = new double[3];
+            double[,] outMatValues = new double[3, 3];
+            double[] outVecValues = new double[3];
             Eigen eigenCalculate = new Eigen();
 
-            eigenCalculate.eigen_decomposition(matValues, OutMatValues, OutVecValues);
+            eigenCalculate.eigen_decomposition(matValues, outMatValues, outVecValues);
 
-            var EigenVectorsUnsorted = new Vector3d[3];
+            var eigenVectorsUnsorted = new Vector3d[3];
 
-            if (eigenCalculate.calcDone)
+            if (eigenCalculate.CalcDone)
             {
-                EigenVectorsUnsorted[0] = new Vector3d(OutMatValues[0, 0], OutMatValues[1, 0], OutMatValues[2, 0]);
-                EigenVectorsUnsorted[1] = new Vector3d(OutMatValues[0, 1], OutMatValues[1, 1], OutMatValues[2, 1]);
-                EigenVectorsUnsorted[2] = new Vector3d(OutMatValues[0, 2], OutMatValues[1, 2], OutMatValues[2, 2]);
+                eigenVectorsUnsorted[0] = new Vector3d(outMatValues[0, 0], outMatValues[1, 0], outMatValues[2, 0]);
+                eigenVectorsUnsorted[1] = new Vector3d(outMatValues[0, 1], outMatValues[1, 1], outMatValues[2, 1]);
+                eigenVectorsUnsorted[2] = new Vector3d(outMatValues[0, 2], outMatValues[1, 2], outMatValues[2, 2]);
             }
 
-            Array.Sort(OutVecValues, EigenVectorsUnsorted, new DescendingAbsoluteVals());
-            EigenValues = OutVecValues;
-            EigenVectors = EigenVectorsUnsorted;
+            Array.Sort(outVecValues, eigenVectorsUnsorted, new DescendingAbsoluteVals());
+            eigenValues = outVecValues;
+            eigenVectors = eigenVectorsUnsorted;
         }
 
         public class DescendingAbsoluteVals : Comparer<double>

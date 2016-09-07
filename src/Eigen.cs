@@ -8,22 +8,22 @@ namespace MechanoAdaptiveGeneration
 {
     public class Eigen
     {
-        public bool startCalc = false;
-        public bool calcDone = false;
+        public bool StartCalc = false;
+        public bool CalcDone = false;
 
         ///////////////////////////////
         //Eigen solver implementation
         ///////////////////////////////
-        private static double hypot2(double x, double y)
+        private static double Hypot2(double x, double y)
         {
             return Math.Sqrt(x * x + y * y);
         }
 
-        private static void tred2(double[,] V, double[] d, double[] e)
+        private static void Tred2(double[,] v, double[] d, double[] e)
         {
             for (int j = 0; j < 3; j++)
             {
-                d[j] = V[3 - 1, j];
+                d[j] = v[3 - 1, j];
             }
 
             for (int i = 3 - 1; i > 0; i--)
@@ -41,9 +41,9 @@ namespace MechanoAdaptiveGeneration
                     e[i] = d[i - 1];
                     for (int j = 0; j < i; j++)
                     {
-                        d[j] = V[i - 1, j];
-                        V[i, j] = 0.0;
-                        V[j, i] = 0.0;
+                        d[j] = v[i - 1, j];
+                        v[i, j] = 0.0;
+                        v[j, i] = 0.0;
                     }
                 }
                 else
@@ -74,13 +74,13 @@ namespace MechanoAdaptiveGeneration
                     for (int j = 0; j < i; j++)
                     {
                         f = d[j];
-                        V[j, i] = f;
-                        g = e[j] + V[j, j] * f;
+                        v[j, i] = f;
+                        g = e[j] + v[j, j] * f;
 
                         for (int k = j + 1; k <= i - 1; k++)
                         {
-                            g += V[k, j] * d[k];
-                            e[k] += V[k, j] * f;
+                            g += v[k, j] * d[k];
+                            e[k] += v[k, j] * f;
                         }
 
                         e[j] = g;
@@ -108,11 +108,11 @@ namespace MechanoAdaptiveGeneration
 
                         for (int k = j; k <= i - 1; k++)
                         {
-                            V[k, j] -= (f * e[k] + g * d[k]);
+                            v[k, j] -= (f * e[k] + g * d[k]);
                         }
 
-                        d[j] = V[i - 1, j];
-                        V[i, j] = 0.0;
+                        d[j] = v[i - 1, j];
+                        v[i, j] = 0.0;
                     }
                 }
                 d[i] = h;
@@ -120,8 +120,8 @@ namespace MechanoAdaptiveGeneration
 
             for (int i = 0; i < 3 - 1; i++)
             {
-                V[3 - 1, i] = V[i, i];
-                V[i, i] = 1.0;
+                v[3 - 1, i] = v[i, i];
+                v[i, i] = 1.0;
 
                 double h = d[i + 1];
 
@@ -129,7 +129,7 @@ namespace MechanoAdaptiveGeneration
                 {
                     for (int k = 0; k <= i; k++)
                     {
-                        d[k] = V[k, i + 1] / h;
+                        d[k] = v[k, i + 1] / h;
                     }
                     for (int j = 0; j <= i; j++)
                     {
@@ -137,30 +137,30 @@ namespace MechanoAdaptiveGeneration
 
                         for (int k = 0; k <= i; k++)
                         {
-                            g += V[k, i + 1] * V[k, j];
+                            g += v[k, i + 1] * v[k, j];
                         }
                         for (int k = 0; k <= i; k++)
                         {
-                            V[k, j] -= g * d[k];
+                            v[k, j] -= g * d[k];
                         }
                     }
                 }
                 for (int k = 0; k <= i; k++)
                 {
-                    V[k, i + 1] = 0.0;
+                    v[k, i + 1] = 0.0;
                 }
             }
             for (int j = 0; j < 3; j++)
             {
-                d[j] = V[3 - 1, j];
-                V[3 - 1, j] = 0.0;
+                d[j] = v[3 - 1, j];
+                v[3 - 1, j] = 0.0;
             }
 
-            V[3 - 1, 3 - 1] = 1.0;
+            v[3 - 1, 3 - 1] = 1.0;
             e[0] = 0.0;
         }
 
-        static void tql2(double[,] V, double[] d, double[] e)
+        static void Tql2(double[,] v, double[] d, double[] e)
         {
             for (int i = 1; i < 3; i++)
             {
@@ -194,7 +194,7 @@ namespace MechanoAdaptiveGeneration
 
                         double g = d[l];
                         double p = (d[l + 1] - g) / (2.0 * e[l]);
-                        double r = hypot2(p, 1.0);
+                        double r = Hypot2(p, 1.0);
 
                         if (p < 0)
                         {
@@ -229,7 +229,7 @@ namespace MechanoAdaptiveGeneration
                             s2 = s;
                             g = c * e[i];
                             h = c * p;
-                            r = hypot2(p, e[i]);
+                            r = Hypot2(p, e[i]);
                             e[i + 1] = s * r;
                             s = e[i] / r;
                             c = p / r;
@@ -238,9 +238,9 @@ namespace MechanoAdaptiveGeneration
 
                             for (int k = 0; k < 3; k++)
                             {
-                                h = V[k, i + 1];
-                                V[k, i + 1] = s * V[k, i] + c * h;
-                                V[k, i] = c * V[k, i] - s * h;
+                                h = v[k, i + 1];
+                                v[k, i + 1] = s * v[k, i] + c * h;
+                                v[k, i] = c * v[k, i] - s * h;
                             }
                         }
 
@@ -274,28 +274,28 @@ namespace MechanoAdaptiveGeneration
 
                     for (int j = 0; j < 3; j++)
                     {
-                        p = V[j, i];
-                        V[j, i] = V[j, k];
-                        V[j, k] = p;
+                        p = v[j, i];
+                        v[j, i] = v[j, k];
+                        v[j, k] = p;
                     }
                 }
             }
         }
 
-        public void eigen_decomposition(double[,] A, double[,] V, double[] d)
+        public void eigen_decomposition(double[,] a, double[,] v, double[] d)
         {
             double[] e = new double[3];
             for (int i = 0; i < 3; i++)
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    V[i, j] = A[i, j];
+                    v[i, j] = a[i, j];
                 }
             }
-            tred2(V, d, e);
-            tql2(V, d, e);
+            Tred2(v, d, e);
+            Tql2(v, d, e);
 
-            calcDone = true;
+            CalcDone = true;
         }
     }
 }

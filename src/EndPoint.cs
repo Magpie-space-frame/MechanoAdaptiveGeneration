@@ -9,22 +9,22 @@ namespace MechanoAdaptiveGeneration
 
     public class EndPoint
     {
-        public AABB owner;
-        public double num;//its actual value - corresponds to the x,y or z value
-        public bool isMin;//is this a min point or a max point?
+        public Aabb Owner;
+        public double Num;//its actual value - corresponds to the x,y or z value
+        public bool IsMin;//is this a min point or a max point?
 
         //constructor
-        public EndPoint(double tNum, bool tIsMin, AABB tOwner)
+        public EndPoint(double tNum, bool tIsMin, Aabb tOwner)
         {
-            num = tNum;
-            isMin = tIsMin;
-            owner = tOwner;
+            Num = tNum;
+            IsMin = tIsMin;
+            Owner = tOwner;
         }
 
         //used as a comparison to sort the endpoints
-        public static int compareEndPoints(EndPoint x, EndPoint y)
+        public static int CompareEndPoints(EndPoint x, EndPoint y)
         {
-            return x.num.CompareTo(y.num);
+            return x.Num.CompareTo(y.Num);
         }
     }
 }
