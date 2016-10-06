@@ -79,6 +79,7 @@ namespace MechanoAdaptiveGeneration
             pManager.AddIntegerParameter("FixedPoints", "FP", "The indices of any points that should be fixed during the generation", GH_ParamAccess.list);
             pManager.AddIntegerParameter("MaxIterations", "MI", "The maximum number of iterations for the generation", GH_ParamAccess.item);
             pManager.AddNumberParameter("VolumeFactor", "VF", "The multiple of the input volume the total ellipsoid volume should take up", GH_ParamAccess.item);
+            pManager[9].Optional = true;
         }
 
         /// <summary>
@@ -266,7 +267,7 @@ namespace MechanoAdaptiveGeneration
                 //plastic anchor for stopping circulation
                 for (int i = 0; i < Pts.Count; i++)
                 {
-                    GoalList.Add(new customK2goals.AnchorPlastic(i, Pts[i], plasticdrag, 0));
+                    GoalList.Add(new customK2goals.AnchorPlastic(i, Pts[i], 0.001, plasticdrag));
                 }
 
                 for (int i = 0; i < FixedPointIndices.Count(); i++)
@@ -313,10 +314,13 @@ namespace MechanoAdaptiveGeneration
                             double effectiveLongAxisLength = minLongAxisLength + (1 - evParam) * (maxLongAxisLength - minLongAxisLength);
 
                             La[i] = scaleEllipsoids * effectiveLongAxisLength * Evec1[i];
+                            if (Eval1[i] == 0.0) La[i] = new Vector3d(0.0001, 0.0001, 0.0001);
 
                             double ratio = Math.Max(minSlenderness, Eval2[i] / Eval1[i]);
+                            if (double.IsNaN(ratio)) ratio=1.0;
 
                             Sa[i] = scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i];
+                            if (Eval2[i] == 0.0) La[i] = new Vector3d(0.0001, 0.0001, 0.0001);
 
                             //if this ellipsoid is a sphere, it can have maximally a radius of maxRadiusCofficient*maxLongAxisLength; This is to restrict the volume.
                             double volumeRatio = maxRadiusCoefficient * maxLongAxisLength / (Math.Pow(ratio * ratio, 0.33333333) * effectiveLongAxisLength);
@@ -337,7 +341,7 @@ namespace MechanoAdaptiveGeneration
                 if (count % updateInterval == 1)
                 {
                     //update the ellipsoid transformations from field
-                    double currentVolumeFillingError = Math.Abs(targetVolumeToFill - sumOfCurrentEllipsoidVolumes);
+                    double currentVolumeFillingError = Math.Abs(targetVolumeToFill - sumOfCurrentEllipsoidVolumes)/targetVolumeToFill;
                     int numberOfInterpolations = (int)Math.Floor((double)count / updateInterval);
                     recentVolumeFillingErrors[(int)(numberOfInterpolations % 10)] = currentVolumeFillingError;
                     if (UpdateScale)
@@ -372,7 +376,7 @@ namespace MechanoAdaptiveGeneration
 
                     if (PushDistance != -1)
                     {
-                        GoalList.Add(new customK2goals.NonLinearRepel(eb, ea, PushDistance, 1, 0.01, -2));
+                        GoalList.Add(new customK2goals.NonLinearRepel(eb, ea, PushDistance, 1, 0.1, -2));
 
                         Line L = new Line(Positions[ea], Positions[eb]);
 
