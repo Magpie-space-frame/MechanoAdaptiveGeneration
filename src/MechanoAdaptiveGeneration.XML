@@ -1,0 +1,216 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MechanoAdaptiveGeneration</name>
+    </assembly>
+    <members>
+        <member name="T:MechanoAdaptiveGeneration.Aabb">
+            <summary>
+            Data structure for an axis-aligned bounding box (AABB)
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.BackGroundData">
+            <summary>
+            Data structure for the grid input data
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.Align">
+            <summary>
+            A goal that aims to align connections betweeen the centres of adjacent ellipsoids to the input data directions
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.customK2goals.AnchorPlastic">
+            <summary>
+            A goal that aims to keep a KangarooSolver.Particle in its current position, if its Move position is less than r away from its current position.
+            Otherwise, the position it aims to keep the particle is updated to the Move position.
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.customK2goals.EllipsoidCollide">
+            <summary>
+            Class to handle a collision of two ellipsoids
+            Outputs necessary data to use in a KangarooSolver collision goal (NonlinearRepel)
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.customK2goals.NonLinearRepel">
+            <summary>
+            A goal that aims for two points to achieve greater distance between them than the one currently between them.
+            The closer together the points, the stronger the weighting of the goal.
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.Eigen">
+            <summary>
+            Eigen solver implementation
+            TODO: Give credit to author(s) of this code!!!!! before publishing the code!!!!!!
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.Ellipsoid">
+            <summary>
+            Data structure to handle ellipsoids
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.EndPoint">
+            <summary>
+            Data structure to handle end points of axis-aligned bounding boxes
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.GenerationComponent">
+            <summary>
+            Grasshopper component for Mechano-adaptive generation of space frames
+            </summary>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.GenerationComponent.#ctor">
+            <summary>
+                Each implementation of GH_Component must provide a public
+                constructor without any arguments.
+                Category represents the Tab in which the component will appear,
+                Subcategory the panel. If you use non-existing tab or panel names,
+                new tabs/panels will automatically be created.
+            </summary>
+        </member>
+        <member name="P:MechanoAdaptiveGeneration.GenerationComponent.Icon">
+            <summary>
+                Provides an Icon for every component that will be visible in the User Interface.
+                Icons need to be 24x24 pixels.
+            </summary>
+        </member>
+        <member name="P:MechanoAdaptiveGeneration.GenerationComponent.ComponentGuid">
+            <summary>
+                Each component must have a unique Guid to identify it.
+                It is vital this Guid doesn't change otherwise old ghx files
+                that use the old ID will partially fail during loading.
+            </summary>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.GenerationComponent.RegisterInputParams(Grasshopper.Kernel.GH_Component.GH_InputParamManager)">
+            <summary>
+                Registers all the input parameters for this component.
+            </summary>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.GenerationComponent.RegisterOutputParams(Grasshopper.Kernel.GH_Component.GH_OutputParamManager)">
+            <summary>
+                Registers all the output parameters for this component.
+            </summary>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.GenerationComponent.SolveInstance(Grasshopper.Kernel.IGH_DataAccess)">
+            <summary>
+                This is the method that actually does the work.
+            </summary>
+            <param name="da">
+                The DA object can be used to retrieve data from input parameters and
+                to store data in output parameters.
+            </param>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.GenerationComponent.GenerateSpaceframe(Rhino.Geometry.Mesh,System.Collections.Generic.List{Rhino.Geometry.Point3d},System.Collections.Generic.List{System.Double},System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Double,System.Collections.Generic.List{System.Int32},System.Int32,System.Double@,System.Int32@,System.Collections.Generic.List{Rhino.Geometry.Point3d}@,System.Boolean@,System.Collections.Generic.List{Rhino.Geometry.Vector3d}@,System.Collections.Generic.List{Rhino.Geometry.Vector3d}@,System.Collections.Generic.List{Rhino.Geometry.Line}@,System.Double@,System.Double@,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            This is the generate method
+            </summary>
+            <param name="m"> the parameter m! </param>
+            <param name="pts"></param>
+            <param name="data"></param>
+            <param name="run"></param>
+            <param name="reset"></param>
+            <param name="updateScale"></param>
+            <param name="valenceFilter"></param>
+            <param name="boundaryCollideStrength"></param>
+            <param name="fixedPointIndices"></param>
+            <param name="maxIterations"></param>
+            <param name="percentVolPacked"></param>
+            <param name="iterations"></param>
+            <param name="ellipsoidCenters"></param>
+            <param name="bakeResult"></param>
+            <param name="longAxes"></param>
+            <param name="shortAxes"></param>
+            <param name="lines"></param>
+            <param name="meshVolume"></param>
+            <param name="sumOfCurrentEllipsoidVolumes"></param>
+            <param name="minLongAxisLength"></param>
+            <param name="maxLongAxisLength"></param>
+            <param name="minSlenderness"></param>
+            <param name="maxRadiusCoefficient"></param>
+            <param name="alignStrength"></param>
+            <param name="edgeLengthFactor"></param>
+            <param name="plasticdrag"></param>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.GenerationComponent.AfterSolveInstance">
+            <summary>
+                Use this to
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.Generator">
+            <summary>
+            Class that handles mechano-adaptive generation of space frames
+            Used by corresponding GH component, but can also be called from a C# Script in GH
+            </summary>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.Generator.Initialize(Rhino.Geometry.Mesh,Rhino.Geometry.Mesh,System.Collections.Generic.List{Rhino.Geometry.Point3d},System.Collections.Generic.List{System.Double},System.Boolean,System.Boolean,System.Double,System.Collections.Generic.List{System.Int32},System.Int32,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            Initialiases an instance to generate a space frame mechano-adaptively
+            </summary>
+            <param name="m">A Mesh delineating the volume to generate a space frame in</param>
+            <param name="s">An (optional) 2D surface mesh to constrain the nodes to</param>
+            <param name="pts">Input configuration of points</param>
+            <param name="data">Input tensorial data</param>
+            <param name="updateScale">Boolean, if true, ellipsoids will be scaled to comply with volume factor</param>
+            <param name="valenceFilter">Boolean, if true, edge connections will be filtered to a maximum of 6</param>
+            <param name="boundaryCollideStrength">weight for collision with boundary</param>
+            <param name="fixedPointIndices">Indices of points to be fixed</param>
+            <param name="maxIterations">maximum iterations to be performed</param>
+            <param name="minLongAxisLength">limit for length of ellipsoid short axis</param>
+            <param name="maxLongAxisLength">limit for length of ellipsoid long axis</param>
+            <param name="minSlenderness">limit for aspect ratio of an ellipsoid</param>
+            <param name="maxRadiusCoefficient">relative limit for volume of an individual ellipsoid</param>
+            <param name="alignStrength">weight for alignment force goal</param>
+            <param name="edgeLengthFactor">factor to scale ellipsoids with when looking for colliding neighbours to connect with</param>
+            <param name="plasticDrag">Weight for the plastic drag goal</param>
+            <param name="volumeFactor">The multiple of the mesh volume the ellipsoids should fill</param>
+            <returns></returns>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.Generator.Step(System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Boolean,System.Boolean)">
+            <summary>
+            Function to perform one step of the MAG algorithm
+            </summary>
+            <param name="plasticDrag">Weight for the plastic drag goal</param>
+            <param name="boundaryCollideStrength">weight for collision with boundary</param>
+            <param name="minLongAxisLength">limit for length of ellipsoid short axis</param>
+            <param name="maxLongAxisLength">limit for length of ellipsoid long axis</param>
+            <param name="minSlenderness">limit for aspect ratio of an ellipsoid</param>
+            <param name="maxRadiusCoefficient">relative limit for volume of an individual ellipsoid</param>
+            <param name="alignStrength">weight for alignment force goal</param>
+            <param name="edgeLengthFactor">factor to scale ellipsoids with when looking for colliding neighbours to connect with</param>
+            <param name="valenceFilter">Boolean, if true, edge connections will be filtered to a maximum of 6</param>
+            <param name="updateScale">Boolean, if true, ellipsoids will be scaled to comply with volume factor</param>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.HelperFunctions">
+            <summary>
+            A collection of useful functions for MAG
+            </summary>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.HelperFunctions.StdDev(System.Collections.Generic.List{System.Double}@)">
+            <summary>
+            Calculates the standard deviation
+            </summary>
+            <param name="values">list of input values</param>
+            <returns></returns>
+        </member>
+        <member name="M:MechanoAdaptiveGeneration.HelperFunctions.TriLinearInterpolate(MechanoAdaptiveGeneration.StressTensor@,MechanoAdaptiveGeneration.StressTensor[],System.Double[])">
+             <summary>
+             given stress tensors at the 8 corners of a cube, and coordinates of a point within that cube
+             perform a trilinear interpolation
+             </summary>
+             <param name="tensorAtPoint">resulting tensor from interpolation</param>
+             <param name="cornerTensors">Tensor values at the corners, ordered 000,001,010,011,100,101,110,111</param>
+             <param name="T">3 numbers in the range 0 to 1</param>
+             <returns>the interpolated stress tensor at the given coordinates</returns>
+            
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.MechanoAdaptiveGenerationInfo">
+            <summary>
+            GH_AssemblyInfo for the MAG plugin
+            </summary>
+        </member>
+        <member name="T:MechanoAdaptiveGeneration.StressTensor">
+            <summary>
+            Data structure to handle a stress tensor
+            </summary>
+        </member>
+    </members>
+</doc>
