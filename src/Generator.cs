@@ -8,6 +8,10 @@ using Rhino.Geometry;
 
 namespace MechanoAdaptiveGeneration
 {
+    /// <summary>
+    /// Class that handles mechano-adaptive generation of space frames
+    /// Used by corresponding GH component, but can also be called from a C# Script in GH
+    /// </summary>
     public class Generator
     {
         public Generator()
@@ -54,6 +58,27 @@ namespace MechanoAdaptiveGeneration
         private double _targetVolumeToFill;
         private double _plasticDragRadius;
 
+        /// <summary>
+        /// Initialiases an instance to generate a space frame mechano-adaptively
+        /// </summary>
+        /// <param name="m">A Mesh delineating the volume to generate a space frame in</param>
+        /// <param name="s">An (optional) 2D surface mesh to constrain the nodes to</param>
+        /// <param name="pts">Input configuration of points</param>
+        /// <param name="data">Input tensorial data</param>
+        /// <param name="updateScale">Boolean, if true, ellipsoids will be scaled to comply with volume factor</param>
+        /// <param name="valenceFilter">Boolean, if true, edge connections will be filtered to a maximum of 6</param>
+        /// <param name="boundaryCollideStrength">weight for collision with boundary</param>
+        /// <param name="fixedPointIndices">Indices of points to be fixed</param>
+        /// <param name="maxIterations">maximum iterations to be performed</param>
+        /// <param name="minLongAxisLength">limit for length of ellipsoid short axis</param>
+        /// <param name="maxLongAxisLength">limit for length of ellipsoid long axis</param>
+        /// <param name="minSlenderness">limit for aspect ratio of an ellipsoid</param>
+        /// <param name="maxRadiusCoefficient">relative limit for volume of an individual ellipsoid</param>
+        /// <param name="alignStrength">weight for alignment force goal</param>
+        /// <param name="edgeLengthFactor">factor to scale ellipsoids with when looking for colliding neighbours to connect with</param>
+        /// <param name="plasticDrag">Weight for the plastic drag goal</param>
+        /// <param name="volumeFactor">The multiple of the mesh volume the ellipsoids should fill</param>
+        /// <returns></returns>
         public bool Initialize(Mesh m, Mesh s, List<Point3d> pts, List<double> data, bool updateScale, bool valenceFilter,
                                         double boundaryCollideStrength, List<int> fixedPointIndices,
                                         int maxIterations, double minLongAxisLength, double maxLongAxisLength,
@@ -168,7 +193,7 @@ namespace MechanoAdaptiveGeneration
                 }
 
             _goalList.Add(new SolidPoint(ix, m, true, boundaryCollideStrength));
-            _goalList.Add(new OnMesh(ix, s, boundaryCollideStrength/10));
+            _goalList.Add(new OnMesh(ix, s, boundaryCollideStrength / 10));
 
             //plastic anchor for stopping circulation
             for (var i = 0; i < pts.Count; i++)
@@ -183,6 +208,19 @@ namespace MechanoAdaptiveGeneration
             return true;
         }
 
+        /// <summary>
+        /// Function to perform one step of the MAG algorithm
+        /// </summary>
+        /// <param name="plasticDrag">Weight for the plastic drag goal</param>
+        /// <param name="boundaryCollideStrength">weight for collision with boundary</param>
+        /// <param name="minLongAxisLength">limit for length of ellipsoid short axis</param>
+        /// <param name="maxLongAxisLength">limit for length of ellipsoid long axis</param>
+        /// <param name="minSlenderness">limit for aspect ratio of an ellipsoid</param>
+        /// <param name="maxRadiusCoefficient">relative limit for volume of an individual ellipsoid</param>
+        /// <param name="alignStrength">weight for alignment force goal</param>
+        /// <param name="edgeLengthFactor">factor to scale ellipsoids with when looking for colliding neighbours to connect with</param>
+        /// <param name="valenceFilter">Boolean, if true, edge connections will be filtered to a maximum of 6</param>
+        /// <param name="updateScale">Boolean, if true, ellipsoids will be scaled to comply with volume factor</param>
         public void Step(double plasticDrag, double boundaryCollideStrength,
                          double minLongAxisLength, double maxLongAxisLength,
                          double minSlenderness, double maxRadiusCoefficient,
@@ -227,8 +265,11 @@ namespace MechanoAdaptiveGeneration
                                                       (1 - evParam) * (maxLongAxisLength - minLongAxisLength);
 
                         _la[i] = _scaleEllipsoids * effectiveLongAxisLength * _evec1[i];
-                        if (_eval1[i] == 0.0) _la[i] = new Vector3d(0.0001, 0.0001, 0.0001);
-
+                        if (_eval1[i] == 0.0)
+                        {
+                            _la[i] = new Vector3d(0.0001, 0.0001, 0.0001);
+                            //add runtime warning message here! HOW?
+                        }
                         var ratio = Math.Max(minSlenderness, _eval2[i] / _eval1[i]);
                         if (Double.IsNaN(ratio)) ratio = 1.0;
 

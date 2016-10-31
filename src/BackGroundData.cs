@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace MechanoAdaptiveGeneration
 {
+    /// <summary>
+    /// Data structure for the grid input data
+    /// </summary>
     public struct BackGroundData
     {
         public List<Point3d> G;
@@ -17,11 +20,11 @@ namespace MechanoAdaptiveGeneration
         public List<double> T4;
         public List<double> T5;
 
-        public int xCount;
-        public int yCount;
-        public int zCount;
-        public double xSize;
-        public double ySize;
-        public double zSize;
+        public int XCount;
+        public int YCount;
+        public int ZCount;
+        public double XSize;
+        public double YSize;
+        public double ZSize;
     }
 }

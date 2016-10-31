@@ -7,12 +7,15 @@ using System.Threading.Tasks;
 
 namespace MechanoAdaptiveGeneration
 {
+    /// <summary>
+    /// A collection of useful functions for MAG
+    /// </summary>
     public class HelperFunctions
     {
         /// <summary>
-        /// bla bla blah
+        /// Calculates the standard deviation
         /// </summary>
-        /// <param name="values">bla bla</param>
+        /// <param name="values">list of input values</param>
         /// <returns></returns>
         public static double StdDev(ref List<double> values)
         {
@@ -348,6 +351,7 @@ namespace MechanoAdaptiveGeneration
         /// given stress tensors at the 8 corners of a cube, and coordinates of a point within that cube
         /// perform a trilinear interpolation
         /// </summary>
+        /// <param name="tensorAtPoint">resulting tensor from interpolation</param>
         /// <param name="cornerTensors">Tensor values at the corners, ordered 000,001,010,011,100,101,110,111</param>
         /// <param name="T">3 numbers in the range 0 to 1</param>
         /// <returns>the interpolated stress tensor at the given coordinates</returns>
