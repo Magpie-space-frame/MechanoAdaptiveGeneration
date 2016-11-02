@@ -36,7 +36,7 @@ namespace MechanoAdaptiveGeneration
         private List<Vector3d> _evec2;
         private List<Vector3d> _evec3;
 
-        private List<IGoal> _goalList;
+        private List<IGoal> _persistentGoalList;
         private StressTensor[,,] _grid;
         private bool _isInitialized;
 
@@ -86,7 +86,7 @@ namespace MechanoAdaptiveGeneration
                                         double edgeLengthFactor, double plasticDrag, double volumeFactor)
         {
             _ps = new PhysicalSystem();
-            _goalList = new List<IGoal>();
+            _persistentGoalList = new List<IGoal>();
             _ellipsoids = new List<Ellipsoid>();
             var massProperties = Rhino.Geometry.VolumeMassProperties.Compute(m);
             _meshVolume = massProperties.Volume;
@@ -130,7 +130,7 @@ namespace MechanoAdaptiveGeneration
 
             _fixedPointIndices = fixedPointIndices;
 
-            _goalList.Clear();
+            _persistentGoalList.Clear();
             _ellipsoids.Clear();
             _lineList.Clear();
 
@@ -192,15 +192,15 @@ namespace MechanoAdaptiveGeneration
                     var b = _scaleEllipsoids * ratio * effectiveLongAxisLength;
                 }
 
-            _goalList.Add(new SolidPoint(ix, m, true, boundaryCollideStrength));
-            _goalList.Add(new OnMesh(ix, s, boundaryCollideStrength / 10));
+            _persistentGoalList.Add(new SolidPoint(ix, m, true, boundaryCollideStrength));
+            _persistentGoalList.Add(new OnMesh(ix, s, boundaryCollideStrength / 10));
 
             //plastic anchor for stopping circulation
             for (var i = 0; i < pts.Count; i++)
-                _goalList.Add(new AnchorPlastic(i, pts[i], _plasticDragRadius, plasticDrag));
+                _persistentGoalList.Add(new AnchorPlastic(i, pts[i], _plasticDragRadius, plasticDrag));
 
             for (var i = 0; i < fixedPointIndices.Count; i++)
-                _goalList.Add(new Anchor(fixedPointIndices[i], pts[fixedPointIndices[i]], 10000));
+                _persistentGoalList.Add(new Anchor(fixedPointIndices[i], pts[fixedPointIndices[i]], 10000));
             _count = 0;
             //EnergySum = double.MaxValue;
 
@@ -234,18 +234,14 @@ namespace MechanoAdaptiveGeneration
 
             var totalOverlap = 0.0;
             double sumOfCurrentEllipsoidVolumes = 0.0;
+            var temporaryGoalList = new List<IGoal>();
 
             int ptCount = _ps.ParticleCount();
 
             for (var i = 2; i < ptCount + 2; i++)
-                (_goalList[i] as AnchorPlastic).Limit = _plasticDragRadius;
+                (_persistentGoalList[i] as AnchorPlastic).Limit = _plasticDragRadius;
 
-            var goalsToKeep = 2 + ptCount + _fixedPointIndices.Count;
-            //Note that if more goals are added in the in the initialization, this number should be increased accordingly
-            _goalList.RemoveRange(goalsToKeep, _goalList.Count - goalsToKeep);
-            //clear everything apart from the SolidPoint Goal, OnMesh goal, the plastic drag goals and the fixed point goals .
-
-            (_goalList[0] as SolidPoint).Strength = boundaryCollideStrength;
+            (_persistentGoalList[0] as SolidPoint).Strength = boundaryCollideStrength;
 
             var positions = _ps.GetPositionArray();
             if (_count % _updateInterval == 1)
@@ -333,11 +329,11 @@ namespace MechanoAdaptiveGeneration
 
                 if (pushDistance != -1)
                 {
-                    _goalList.Add(new NonLinearRepel(eb, ea, pushDistance, 1, 0.1, -2));
+                    temporaryGoalList.Add(new NonLinearRepel(eb, ea, pushDistance, 1, 0.1, -2));
 
                     var l = new Line(positions[ea], positions[eb]);
 
-                    _goalList.Add(new Align(eb, ea,
+                    temporaryGoalList.Add(new Align(eb, ea,
                         new Vector3d[3]
                         {
                                     0.5*(_ellipsoids[ea].UnitXAxis + _ellipsoids[eb].UnitXAxis),
@@ -359,8 +355,8 @@ namespace MechanoAdaptiveGeneration
                 }
             }
 
-            _ps.SimpleStep(_goalList);
-
+            temporaryGoalList.AddRange(_persistentGoalList);
+            _ps.SimpleStep(temporaryGoalList);
 
             //Output the mesh, and how many iterations it took to converge
             //ellipsoidCenters = _ps.GetPositions().ToList();
