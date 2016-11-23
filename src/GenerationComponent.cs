@@ -208,7 +208,7 @@ namespace MechanoAdaptiveGeneration
 
                 localData.Clear();
                 localData = Data;
-                HelperFunctions.processData(localData, ref backGroundData, ref grid);
+                HelperFunctions.ProcessData(localData, ref backGroundData, ref grid);
 
                 La.Clear();
                 Sa.Clear();
@@ -255,7 +255,7 @@ namespace MechanoAdaptiveGeneration
                             effectiveLongAxisLength *= volumeRatio;
                         }
 
-                        Ellipsoids[i].updateTransform(scaleEllipsoids * effectiveLongAxisLength * Evec1[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec3[i]);
+                        Ellipsoids[i].UpdateTransform(scaleEllipsoids * effectiveLongAxisLength * Evec1[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec3[i]);
                         double a = scaleEllipsoids * effectiveLongAxisLength;
                         double b = scaleEllipsoids * ratio * effectiveLongAxisLength;
                         sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * a * b * b / 3.0;
@@ -331,7 +331,7 @@ namespace MechanoAdaptiveGeneration
                                 effectiveLongAxisLength *= volumeRatio;
                             }
 
-                            Ellipsoids[i].updateTransform(scaleEllipsoids * effectiveLongAxisLength * Evec1[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec3[i]);
+                            Ellipsoids[i].UpdateTransform(scaleEllipsoids * effectiveLongAxisLength * Evec1[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec3[i]);
                             double a = scaleEllipsoids * effectiveLongAxisLength;
                             double b = scaleEllipsoids * ratio * effectiveLongAxisLength;
                             sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * a * b * b / 3.0;
@@ -346,7 +346,7 @@ namespace MechanoAdaptiveGeneration
                     recentVolumeFillingErrors[(int)(numberOfInterpolations % 10)] = currentVolumeFillingError;
                     if (UpdateScale)
                     {
-                        HelperFunctions.updateScaleByVolume(ref scaleEllipsoids, ref sumOfCurrentEllipsoidVolumes, ref Ellipsoids, ref targetVolumeToFill);
+                        HelperFunctions.UpdateScaleByVolume(ref scaleEllipsoids, ref sumOfCurrentEllipsoidVolumes, ref targetVolumeToFill);
                     }
                 }
 
@@ -380,7 +380,7 @@ namespace MechanoAdaptiveGeneration
 
                         Line L = new Line(Positions[ea], Positions[eb]);
 
-                        GoalList.Add(new Align(eb, ea, new Vector3d[3] { 0.5 * (Ellipsoids[ea].unitXAxis + Ellipsoids[eb].unitXAxis), 0.5 * (Ellipsoids[ea].unitYAxis + Ellipsoids[eb].unitYAxis), 0.5 * (Ellipsoids[ea].unitZAxis + Ellipsoids[eb].unitZAxis) }, AlignStrength));
+                        GoalList.Add(new Align(eb, ea, new Vector3d[3] { 0.5 * (Ellipsoids[ea].UnitXAxis + Ellipsoids[eb].UnitXAxis), 0.5 * (Ellipsoids[ea].UnitYAxis + Ellipsoids[eb].UnitYAxis), 0.5 * (Ellipsoids[ea].UnitZAxis + Ellipsoids[eb].UnitZAxis) }, AlignStrength));
 
                         double LLen = L.Length;
 
