@@ -90,58 +90,39 @@ namespace MechanoAdaptiveGeneration
             DA.GetData<double>(8, ref volumeFactor);
 
             bool UpdateScale = true;
-            bool ValenceFilter = false;
             double BoundaryCollideStrength = 10000.0;
+            double AlignStrength = inputOptions[3];
+            double plasticdragDist = inputOptions[4];
             int maxIterations = 1000;
-            
-
-            //Set up the outputs - the DA.SetData is at the end
-            double percentVolPacked = new double();
-            int Iterations = 0;
-            Running = false;
-            List<Point3d> EllipsoidCenters = new List<Point3d>();
-            bool bakeResult = new bool();
-            List<Vector3d> LongAxes = new List<Vector3d>();
-            List<Vector3d> ShortAxes = new List<Vector3d>();
-            List<Double> RecentErrors = new List<Double>();
-            List<Line> Lines = new List<Line>();
-
-            //the original start of the run script
 
             double minLongAxisLength = inputOptions[0];
             double maxLongAxisLength = inputOptions[1];
             double minSlenderness = inputOptions[2];
-            double maxRadiusCoefficient = inputOptions[3];
-            double initialScaleEllipsoids = inputOptions[4];
-            double AlignStrength = inputOptions[5];
-            double targetPressure = inputOptions[6];
-            double EdgeLengthFactor = inputOptions[7];
-            double plasticdragDist = inputOptions[8];
-
 
             if (Reset)
             {
                 Gen = new MechanoAdaptiveGeneration.Generator();
-                //input parameters: Mesh, Points, field Data, updateScale, valenceFilter, boundaryCollide, fixedPointIndices
-                Gen.Initialize(M, S, Pts, Data, UpdateScale, ValenceFilter, BoundaryCollideStrength, FixedPointIndices, maxIterations, minLongAxisLength, maxLongAxisLength, minSlenderness, 1.0, AlignStrength, 0.0, plasticdragDist, volumeFactor);
-                //... maxIterations, minLA, maxLA, minSlender, maxRad, alignStrength, edgeLengthFactor, plasticDragDist, volumeFactor
+                Gen.Initialize(M, S, Pts, Data, maxIterations, UpdateScale, plasticdragDist, BoundaryCollideStrength, AlignStrength,
+                    FixedPointIndices, minLongAxisLength, maxLongAxisLength, minSlenderness, volumeFactor);
             }
 
             if (Run)
             {
-                //parameters: plasticDragDist, Boundarycollidestrength, minLA, maxLA, minSlender, maxRad, alignStrength, edgeLengthFactor, valenceFilter, updateScale
-                Gen.Step(plasticdragDist, BoundaryCollideStrength, minLongAxisLength, maxLongAxisLength, minSlenderness, 1.0, AlignStrength, 0.0, false, true);
-                Running = true;
+                Gen.Step(true, plasticdragDist, BoundaryCollideStrength, AlignStrength, minLongAxisLength, maxLongAxisLength, minSlenderness);
             }
 
             //set the outputs
             List<Point3d> centres = new List<Point3d>();
-            centres = Gen.GetCentres();
-
             List<Vector3d> longAxes = new List<Vector3d>();
-            longAxes = Gen.GetLongAxes();
-
             List<Vector3d> shortAxes = new List<Vector3d>();
+            double percentVolPacked = new double();
+            int Iterations = 0;
+            bool bakeResult = new bool();
+            List<Double> RecentErrors = new List<Double>();
+            List<Line> Lines = new List<Line>();
+
+            centres = Gen.GetCentres();
+            longAxes = Gen.GetLongAxes();
             shortAxes = Gen.GetShortAxes();
 
             DA.SetDataList(0, centres);
