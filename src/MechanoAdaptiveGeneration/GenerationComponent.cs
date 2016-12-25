@@ -11,42 +11,7 @@ namespace MechanoAdaptiveGeneration
     public class GenerationComponent : GH_Component
     {
         private bool Running;
-        bool isInitialized = false;
-        //the script below the grey line
-        KangarooSolver.PhysicalSystem PS;
-
-        List<IGoal> GoalList;
-
-        List<Ellipsoid> Ellipsoids;
-        
-        double scaleEllipsoids;
-        double ev1mean;
-        double ev1stdev;
-        double ev1max;
-        double ev1min;
-
-        List<Line> LineList = new List<Line>();
-
-        int count;
-        int updateInterval;
-        double[] recentVolumeFillingErrors;
-
-        List<Vector3d> Evec1;
-        List<Vector3d> Evec2;
-        List<Vector3d> Evec3;
-        
-        List<double> Eval1;
-        List<double> Eval2;
-        List<double> Eval3;
-
-        List<double> localData;
-
-        List<Vector3d> La;
-        List<Vector3d> Sa;
-
-        //Gridpoints and tensors there
-        BackGroundData backGroundData;
-        StressTensor[,,] grid;
+        MechanoAdaptiveGeneration.Generator Gen;
 
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -58,7 +23,7 @@ namespace MechanoAdaptiveGeneration
         public GenerationComponent()
           : base("MechanoAdaptiveGeneration", "Generate",
               "",
-              "MechanoAdaptuve", "")
+              "MechanoAdaptive", "")
         {
         }
 
@@ -67,18 +32,16 @@ namespace MechanoAdaptiveGeneration
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
+            pManager.AddBooleanParameter("Reset", "Rst", "Reset the generation", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("Run", "R", "Run the generation", GH_ParamAccess.item);
             pManager.AddMeshParameter("Mesh", "M", "The volume to fill as a RhinoMesh", GH_ParamAccess.item);
+            pManager.AddMeshParameter("Mesh", "S", "The surface to constrain points onto (optional)", GH_ParamAccess.item);
             pManager.AddPointParameter("Points", "P", "The start positions of the particles", GH_ParamAccess.list);
             pManager.AddNumberParameter("Data", "D", "The tensor data for the volume", GH_ParamAccess.list);
-            pManager.AddNumberParameter("Options", "O", "The input options for the generation", GH_ParamAccess.list);
-            pManager.AddBooleanParameter("Run", "R", "Run the generation", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("Reset", "Rst", "Reset the generation", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("UpdateScale", "US", "Update the scale during the generation", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("ValenceFilter", "VF", "Filter the edges depending on valence", GH_ParamAccess.item);
-            pManager.AddNumberParameter("BoundaryStrength", "BS", "The strength for the boundary collision", GH_ParamAccess.item);
             pManager.AddIntegerParameter("FixedPoints", "FP", "The indices of any points that should be fixed during the generation", GH_ParamAccess.list);
-            pManager.AddIntegerParameter("MaxIterations", "MI", "The maximum number of iterations for the generation", GH_ParamAccess.item);
-
+            pManager.AddNumberParameter("Options", "O", "The input options for the generation", GH_ParamAccess.list);
+            pManager.AddNumberParameter("VolumeFactor", "VF", "The multiple of the input volume the total ellipsoid volume should take up", GH_ParamAccess.item);
+            pManager[3].Optional = true;
         }
 
         /// <summary>
@@ -86,13 +49,14 @@ namespace MechanoAdaptiveGeneration
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("PercentVolumePacked", "PVP", "The percentage of the volume packed with ellipsoids", GH_ParamAccess.item);
             pManager.AddGenericParameter("EllipsoidCentres", "EC", "The locations of the centres for each ellipsoid", GH_ParamAccess.list);
             pManager.AddGenericParameter("LongAxes", "LA", "The long axes for each ellipsoid as a Vector3d", GH_ParamAccess.list);
             pManager.AddGenericParameter("ShortAxes", "SA", "The short axes for each ellipsoid as a Vector3d", GH_ParamAccess.list);
+            pManager.AddGenericParameter("PercentVolumePacked", "PVP", "The percentage of the volume packed with ellipsoids", GH_ParamAccess.item);
             pManager.AddGenericParameter("Iterations", "I", "The number of iterations so far", GH_ParamAccess.item);
             pManager.AddGenericParameter("Lines", "L", "The lines connecting ellipsoids", GH_ParamAccess.list);
             pManager.AddGenericParameter("Bake", "B", "A boolean to bake the results when ready", GH_ParamAccess.item);
+            pManager.AddGenericParameter("RecentErrors", "RE", "Last ten deviations from target volume", GH_ParamAccess.list);
         }
 
         /// <summary>
@@ -104,368 +68,72 @@ namespace MechanoAdaptiveGeneration
         {
 
             //get all the data and assign to pointers
-            Mesh M = new Mesh();
-            DA.GetData(0, ref M);
-            List<Point3d> Pts = new List<Point3d>();
-            DA.GetDataList(1, Pts);
-            List<double> Data = new List<double>();
-            DA.GetDataList(2, Data);
-            List<double> inputOptions = new List<double>();
-            DA.GetDataList(3, inputOptions);
-            bool Run = new bool();
-            DA.GetData(4, ref Run);
             bool Reset = new bool();
-            DA.GetData(5, ref Reset);
-            bool UpdateScale = new bool();
-            DA.GetData(6, ref UpdateScale);
-            bool ValenceFilter = new bool();
-            DA.GetData(7, ref ValenceFilter);
-            double BoundaryCollideStrength = new double();
-            DA.GetData(8, ref BoundaryCollideStrength);
+            DA.GetData(0, ref Reset);
+            bool Run = new bool();
+            DA.GetData(1, ref Run);
+
+            Mesh M = new Mesh();
+            DA.GetData(2, ref M);
+            Mesh S = new Mesh();
+            DA.GetData(3, ref S);
+
+            List<Point3d> Pts = new List<Point3d>();
+            DA.GetDataList(4, Pts);
+            List<double> Data = new List<double>();
+            DA.GetDataList(5, Data);
             List<int> FixedPointIndices = new List<int>();
-            DA.GetDataList(9, FixedPointIndices);
-            int maxIterations = new int();
-            DA.GetData<int>(10, ref maxIterations);
-            
+            DA.GetDataList(6, FixedPointIndices);
+            List<double> inputOptions = new List<double>();
+            DA.GetDataList(7, inputOptions);
+            double volumeFactor = new double();
+            DA.GetData<double>(8, ref volumeFactor);
 
-            //Set up the outputs - the DA.SetData is at the end
-            double percentVolPacked = new double();
-            int Iterations = 0;
-            List<Point3d> EllipsoidCenters = new List<Point3d>();
-            bool bakeResult = new bool();
-            List<Vector3d> LongAxes = new List<Vector3d>();
-            List<Vector3d> ShortAxes = new List<Vector3d>();
-            List<Line> Lines = new List<Line>();
+            bool UpdateScale = true;
+            double BoundaryCollideStrength = 10000.0;
+            double AlignStrength = inputOptions[3];
+            double plasticdragDist = inputOptions[4];
+            int maxIterations = 1000;
 
-            //the original start of the run script
-            int numberOfOptionSets = inputOptions.Count / 9;
-            var meshVolumeProperties = VolumeMassProperties.Compute(M);
-            double meshVolume = meshVolumeProperties.Volume;
-            double sumOfCurrentEllipsoidVolumes;
+            double minLongAxisLength = inputOptions[0];
+            double maxLongAxisLength = inputOptions[1];
+            double minSlenderness = inputOptions[2];
 
-            for (int currentOptionSet = 0; currentOptionSet < 1; currentOptionSet++)
+            if (Reset)
             {
-                double minLongAxisLength = inputOptions[currentOptionSet];
-                double maxLongAxisLength = inputOptions[currentOptionSet + 1];
-                double minSlenderness = inputOptions[currentOptionSet + 2];
-                double maxRadiusCoefficient = inputOptions[currentOptionSet + 3];
-                double initialScaleEllipsoids = inputOptions[currentOptionSet + 4];
-                double AlignStrength = inputOptions[currentOptionSet + 5];
-                double targetPressure = inputOptions[currentOptionSet + 6];
-                double EdgeLengthFactor = inputOptions[currentOptionSet + 7];
-                double plasticdrag = inputOptions[currentOptionSet + 8];
+                Gen = new MechanoAdaptiveGeneration.Generator();
+                Gen.Initialize(M, S, Pts, Data, maxIterations, UpdateScale, plasticdragDist, BoundaryCollideStrength, AlignStrength,
+                    FixedPointIndices, minLongAxisLength, maxLongAxisLength, minSlenderness, volumeFactor);
+            }
 
-                if (Reset || !isInitialized)
-                {
-                    PS = new KangarooSolver.PhysicalSystem();
-                    GoalList = new List<IGoal>();
-                    Ellipsoids = new List<Ellipsoid>();
-
-                    //set to zero so they are assigned.
-                    scaleEllipsoids = 0;
-                    ev1mean = 0;
-                    ev1stdev = 0;
-                    ev1max = 0;
-                    ev1min = 0;
-
-                    LineList = new List<Line>();
-
-                    count = 0;
-                    updateInterval = 2;
-                    recentVolumeFillingErrors = new double[10];
-                  
-
-                    Eval1 = new List<double>();
-                    Eval2 = new List<double>();
-                    Eval3 = new List<double>();
-
-                    Evec1 = new List<Vector3d>();
-                    Evec2 = new List<Vector3d>();
-                    Evec3 = new List<Vector3d>();
-
-                    localData = new List<double>();
-
-                    La = new List<Vector3d>();
-                    Sa = new List<Vector3d>();
-
-                    //Gridpoints and tensors there
-                    backGroundData = new BackGroundData();
-                    grid = new StressTensor[0, 0, 0];
-
-                    Running = false;
-                    bakeResult = false;
-                    PS.ClearParticles();
-                    scaleEllipsoids = initialScaleEllipsoids;
-                    sumOfCurrentEllipsoidVolumes = 0.0;
-
-                    GoalList.Clear();
-                    Ellipsoids.Clear();
-                    LineList.Clear();
-
-                    localData.Clear();
-                    localData = Data;
-                    HelperFunctions.processData(localData, ref backGroundData, ref grid);
-
-                    La.Clear();
-                    Sa.Clear();
-
-                    HelperFunctions.InterpolateTensor(Pts.ToArray(), ref Evec1, ref Evec2, ref Evec3, ref Eval1, ref Eval2, ref Eval3,grid,backGroundData);
-
-                    //ellipsoid size is in range mean(ev1) +- 2 stdDev(ev1)
-                    ev1mean = Eval1.Average();
-                    ev1stdev = HelperFunctions.StdDev(ref Eval1);
-                    ev1max = ev1mean + 2 * ev1stdev;
-                    ev1min = ev1mean - 2 * ev1stdev;
-
-                    var ix = new List<int>();
-
-                    if (Evec1 != null && Evec2 != null && Evec3 != null || true)
-                    {
-                        for (int i = 0; i < Pts.Count; i++)
-                        {
-                            PS.AddParticle(Pts[i], 1); //add a particle for every point
-                            ix.Add(i);
-                            Ellipsoids.Add(new Ellipsoid(Pts[i]));
-
-                            //translate these values to rs and rl
-                            double ClampEval = Math.Max(Eval1[i], ev1min);
-                            ClampEval = Math.Min(ClampEval, ev1max);
-
-                            double evParam = (ClampEval - ev1min) / (ev1max - ev1min);
-
-                            double effectiveLongAxisLength = minLongAxisLength + (1 - evParam) * (maxLongAxisLength - minLongAxisLength);
-
-                            La.Add(scaleEllipsoids * effectiveLongAxisLength * Evec1[i]);
-
-                            //double ratio = Math.Max(Math.Min(Math.Abs(Eval2[i]), maxLongAxisLength / scaleEllipsoids) / effectiveLongAxisLength, minSlenderness);
-                            double ratio = Math.Max(minSlenderness, Eval2[i] / Eval1[i]);
-
-                            Sa.Add(scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i]);
-
-                            //if this ellipsoid is a sphere, it can have maximally a radius of maxRadiusCofficient*maxLongAxisLength; This is to restrict the volume.
-                            double volumeRatio = maxRadiusCoefficient * maxLongAxisLength / (Math.Pow(ratio * ratio, 0.33333333) * effectiveLongAxisLength);
-                            if (volumeRatio < 1)
-                            {
-                                Sa[i] *= volumeRatio;
-                                La[i] *= volumeRatio;
-                                effectiveLongAxisLength *= volumeRatio;
-                            }
-
-                            Ellipsoids[i].updateTransform(scaleEllipsoids * effectiveLongAxisLength * Evec1[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec3[i]);
-                            double a = scaleEllipsoids * effectiveLongAxisLength;
-                            double b = scaleEllipsoids * ratio * effectiveLongAxisLength;
-                            sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * a * b * b / 3.0;
-                        }
-                    }
-                    
-                    GoalList.Add(new KangarooSolver.Goals.SolidPoint(ix, M, true, BoundaryCollideStrength));
-
-                    //plastic anchor for stopping circulation
-                    for (int i = 0; i < Pts.Count; i++)
-                    {
-                        GoalList.Add(new customK2goals.AnchorPlastic(i, Pts[i], plasticdrag, 1000));
-                    }
-
-                    for (int i = 0; i < FixedPointIndices.Count(); i++)
-                    {
-                        GoalList.Add(new KangarooSolver.Goals.Anchor(FixedPointIndices[i], Pts[FixedPointIndices[i]], 10000));
-                    }
-                    count = 0;
-                    //EnergySum = double.MaxValue;
-
-                    isInitialized = true;
-                    Running = Run;
-                }
-                else
-                {
-                    double totalOverlap = 0.0;
-                    sumOfCurrentEllipsoidVolumes = 0.0;
-
-                    Running = Run;
-                    bakeResult = false;
-
-                    for (int i = 1; i < Pts.Count + 1; i++)
-                    {
-                        (GoalList[i] as customK2goals.AnchorPlastic).Limit = plasticdrag;
-                    }
-
-                    int GoalsToKeep = 1 + Pts.Count + FixedPointIndices.Count(); //Note that if more goals are added in the in the initialization, this number should be increased accordingly
-                    GoalList.RemoveRange(GoalsToKeep, GoalList.Count - GoalsToKeep); //clear everything apart from the SolidPoint Goal.
-
-                    (GoalList[0] as KangarooSolver.Goals.SolidPoint).Strength = BoundaryCollideStrength;
-
-                    var Positions = PS.GetPositionArray();
-
-                    for (int i = 0; i < Positions.Count(); i++)
-                        if (Evec1 != null && Evec2 != null && Evec3 != null || true)
-                        {
-                            {
-                                double ClampEval = Math.Max(Eval1[i], ev1min);
-                                ClampEval = Math.Min(ClampEval, ev1max);
-                                double evParam = (ClampEval - ev1min) / (ev1max - ev1min);
-                                double effectiveLongAxisLength = minLongAxisLength + (1 - evParam) * (maxLongAxisLength - minLongAxisLength);
-
-                                La[i] = scaleEllipsoids * effectiveLongAxisLength * Evec1[i];
-                                
-                                double ratio = Math.Max(minSlenderness, Eval2[i] / Eval1[i]);
-
-                                Sa[i] = scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i];
-
-                                //if this ellipsoid is a sphere, it can have maximally a radius of maxRadiusCofficient*maxLongAxisLength; This is to restrict the volume.
-                                double volumeRatio = maxRadiusCoefficient * maxLongAxisLength / (Math.Pow(ratio * ratio, 0.33333333) * effectiveLongAxisLength);
-                                if (volumeRatio < 1)
-                                {
-                                    Sa[i] *= volumeRatio;
-                                    La[i] *= volumeRatio;
-                                    effectiveLongAxisLength *= volumeRatio;
-                                }
-
-                                Ellipsoids[i].updateTransform(scaleEllipsoids * effectiveLongAxisLength * Evec1[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec2[i], scaleEllipsoids * ratio * effectiveLongAxisLength * Evec3[i]);
-                                double a = scaleEllipsoids * effectiveLongAxisLength;
-                                double b = scaleEllipsoids * ratio * effectiveLongAxisLength;
-                                sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * a * b * b / 3.0;
-                            }
-
-                            if (count % updateInterval == 1)
-                            {
-                                //update the ellipsoid transformations from field
-                                double currentVolumeFillingError = Math.Abs(1.0 - sumOfCurrentEllipsoidVolumes / (1.8 * meshVolume));
-                                int numberOfInterpolations = (int)Math.Floor((double)count / updateInterval);
-                                recentVolumeFillingErrors[(int)(numberOfInterpolations % updateInterval)] = currentVolumeFillingError;
-                                HelperFunctions.InterpolateTensor(Positions, ref Evec1, ref Evec2, ref Evec3, ref Eval1, ref Eval2, ref Eval3,grid,backGroundData);
-                            }
-                        }
-
-                    percentVolPacked = sumOfCurrentEllipsoidVolumes / meshVolume;
-
-                    //A pair of matching lists to contain the collisions
-                    List<int> CollideRef0 = new List<int>();
-                    List<int> CollideRef1 = new List<int>();
-
-                    //use SAP to find AABB collisions
-                    HelperFunctions.SweepAndPrune(Ellipsoids, Positions, ref CollideRef0, ref CollideRef1);
-
-                    //narrow phase collision
-                    var ConnectedEdges = new List<int>[Positions.Length];
-                    for (int i = 0; i < Positions.Length; i++)
-                    {
-                        ConnectedEdges[i] = new List<int>();
-                    }
-
-                    LineList.Clear();
-                    for (int i = 0; i < CollideRef0.Count(); i++)
-                    {
-                        int ea = CollideRef0[i];
-                        int eb = CollideRef1[i];
-                        var Collision = new customK2goals.EllipsoidCollide(Ellipsoids[ea], Ellipsoids[eb]);
-                        double PushDistance = Collision.CalculateCollision();
-
-                        if (PushDistance != -1)
-                        {
-                            GoalList.Add(new customK2goals.NonLinearRepel(eb, ea, PushDistance, 1, 0.01, -2));
-
-                            Line L = new Line(Positions[ea], Positions[eb]);
-
-                            GoalList.Add(new Align(eb, ea, new Vector3d[3] {0.5 * (Ellipsoids[ea].unitXAxis + Ellipsoids[eb].unitXAxis),0.5 * (Ellipsoids[ea].unitYAxis + Ellipsoids[eb].unitYAxis),0.5 * (Ellipsoids[ea].unitZAxis + Ellipsoids[eb].unitZAxis)}, AlignStrength));
-
-                            double LLen = L.Length;
-
-                            if ((PushDistance - LLen) / LLen > EdgeLengthFactor)
-                            {
-                                LineList.Add(L);
-                                ConnectedEdges[ea].Add(LineList.Count - 1);
-                                ConnectedEdges[eb].Add(LineList.Count - 1);
-                            }
-                            
-                            if (!Double.IsNaN(PushDistance))
-                            {
-                                totalOverlap = totalOverlap + 2 * Math.Abs(PushDistance);
-                            }
-                        }
-                    }
-                    
-                    PS.SimpleStep(GoalList);
-
-                    //comment out the scaling method you don't want
-                    if (UpdateScale && count % updateInterval == 1)
-                    {
-                        HelperFunctions.updateScaleByVolume(ref scaleEllipsoids, ref sumOfCurrentEllipsoidVolumes, ref Ellipsoids, ref meshVolume);
-                    }
-
-                    //Output the mesh, and how many iterations it took to converge
-                    EllipsoidCenters = PS.GetPositions().ToList();
-
-                    LongAxes = La;
-                    ShortAxes = Sa;
-
-                    count++;
-                    if (count > maxIterations / 10)
-                    {
-                        double averageFillingError = recentVolumeFillingErrors.ToList().Average();
-                        if (averageFillingError < 0.0001 || count > maxIterations)
-                        {
-                            Running = false;
-                            bakeResult = true;
-                        }
-                    }
-
-                    Iterations = count;
-
-                    //optional post-packing connectivity culling
-                    if (ValenceFilter)
-                    {
-                        var Keep = new bool[LineList.Count];
-                        for (int i = 0; i < Pts.Count; i++)
-                        {
-                            int CurrentValence = ConnectedEdges[i].Count;
-                            var EdgeIndices = new int[CurrentValence];
-                            // TODO: Replace this for boundary faces/edges
-                            int TargetValence = 6;
-
-                            var EdgeLengths = new double[CurrentValence];
-
-                            for (int j = 0; j < CurrentValence; j++)
-                            {
-                                EdgeLengths[j] = LineList[ConnectedEdges[i][j]].Length;
-                                EdgeIndices[j] = j;
-                            }
-
-                            Array.Sort(EdgeLengths, EdgeIndices);
-
-                            int Maximum = Math.Min(TargetValence, ConnectedEdges[i].Count);
-                            for (int j = 0; j < Maximum; j++)
-                            {
-                                Keep[ConnectedEdges[i][EdgeIndices[j]]] = true;
-                            }
-                        }
-
-                        var KeptLines = new List<Line>();
-                        for (int i = 0; i < LineList.Count; i++)
-                        {
-                            if (Keep[i])
-                            {
-                                KeptLines.Add(LineList[i]);
-                            }
-                        }
-
-                        Lines = KeptLines;
-                    }
-                    else
-                    {
-                        Lines = LineList;
-                    }
-                }
+            if (Run)
+            {
+                Gen.Step(true, plasticdragDist, BoundaryCollideStrength, AlignStrength, minLongAxisLength, maxLongAxisLength, minSlenderness);
             }
 
             //set the outputs
-            DA.SetData(0, percentVolPacked);
-            DA.SetDataList(1, EllipsoidCenters);
-            DA.SetDataList(2, LongAxes);
-            DA.SetDataList(3, ShortAxes);
+            List<Point3d> centres = new List<Point3d>();
+            List<Vector3d> longAxes = new List<Vector3d>();
+            List<Vector3d> shortAxes = new List<Vector3d>();
+            double percentVolPacked = new double();
+            int Iterations = 0;
+            bool bakeResult = new bool();
+            List<Double> RecentErrors = new List<Double>();
+            List<Line> Lines = new List<Line>();
+
+            centres = Gen.GetCentres();
+            longAxes = Gen.GetLongAxes();
+            shortAxes = Gen.GetShortAxes();
+
+            DA.SetDataList(0, centres);
+            DA.SetDataList(1, longAxes);
+            DA.SetDataList(2, shortAxes);
+
+            DA.SetData(3, percentVolPacked);
             DA.SetData(4, Iterations);
             DA.SetData(5, Lines);
             DA.SetData(6, bakeResult);
-            
+            DA.SetDataList(7, RecentErrors);
         }
 
         /// <summary>
@@ -480,7 +148,7 @@ namespace MechanoAdaptiveGeneration
                 doc.ScheduleSolution(1, callback);
             }
         }
-        
+
         private void ScheduleCallback(GH_Document doc)
         {
             ExpireSolution(false);

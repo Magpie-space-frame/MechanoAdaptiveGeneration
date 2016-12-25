@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 namespace MechanoAdaptiveGeneration
 {
 
+    /// <summary>
+    /// Data structure to handle a stress tensor
+    /// </summary>
     public class StressTensor
     {
         public double[] Values;
@@ -16,9 +19,9 @@ namespace MechanoAdaptiveGeneration
             Values = new Double[9] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         }
 
-        public StressTensor(List<double> Vals)
+        public StressTensor(List<double> vals)
         {
-            Values = Vals.ToArray();
+            Values = vals.ToArray();
         }
     }
 }

@@ -4,6 +4,9 @@ using Grasshopper.Kernel;
 
 namespace MechanoAdaptiveGeneration
 {
+    /// <summary>
+    /// GH_AssemblyInfo for the MAG plugin
+    /// </summary>
     public class MechanoAdaptiveGenerationInfo : GH_AssemblyInfo
     {
         public override string Name
