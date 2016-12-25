@@ -7,28 +7,32 @@ using System.Threading.Tasks;
 
 namespace MechanoAdaptiveGeneration.customK2goals
 {
-    public class EllipsoidCollide // No longer a Goal object itself. This can detect collision and output info then used for the actual goal
+    /// <summary>
+    /// Class to handle a collision of two ellipsoids
+    /// Outputs necessary data to use in a KangarooSolver collision goal (NonlinearRepel)
+    /// </summary>
+    public class EllipsoidCollide
     {
-        Ellipsoid e1;
-        Ellipsoid e2;
+        Ellipsoid _e1;
+        Ellipsoid _e2;
 
-        public double overlap;
-        public double extension;
+        public double Overlap;
+        public double Extension;
 
         public EllipsoidCollide(Ellipsoid _e1, Ellipsoid _e2)
         {
-            e1 = _e1;
-            e2 = _e2;
+            this._e1 = _e1;
+            this._e2 = _e2;
         }
 
         public double CalculateCollision()
         {
-            e1.calculateAxesAndScales();
-            e2.calculateAxesAndScales();
+            _e1.CalculateAxesAndScales();
+            _e2.CalculateAxesAndScales();
 
             //calculate distance vectors back and forth, and the length of the distance
             //this will become part of the narrow phase check
-            Vector3d pjk = new Vector3d(e2.position - e1.position);
+            Vector3d pjk = new Vector3d(_e2.Position - _e1.Position);
             double pjkLength = pjk.Length;
             Vector3d pkj = new Vector3d(-pjk);
 
@@ -36,11 +40,11 @@ namespace MechanoAdaptiveGeneration.customK2goals
             Vector3d pushVector = new Vector3d(pjk);
 
             //Transform connection vector onto "sphere" coordinates of either ellipsoid
-            e1.calculateInverse();
-            e2.calculateInverse();
+            _e1.CalculateInverse();
+            _e2.CalculateInverse();
             //find length of vector inside each ellipsoid
-            double jDistance = e1.findDistanceInside(pjk);
-            double kDistance = e2.findDistanceInside(pkj);
+            double jDistance = _e1.FindDistanceInside(pjk);
+            double kDistance = _e2.FindDistanceInside(pkj);
 
             double touchingDistance = jDistance + kDistance;
             if (pjkLength - (touchingDistance) < 0)
