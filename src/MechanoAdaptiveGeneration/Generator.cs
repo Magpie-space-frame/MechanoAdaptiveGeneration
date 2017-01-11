@@ -164,12 +164,16 @@ namespace MechanoAdaptiveGeneration
                 }
 
             _persistentGoalList.Add(new SolidPoint(ix, m, true, boundaryCollideStrength));
-            _persistentGoalList.Add(new OnMesh(ix, s, boundaryCollideStrength / 10));
 
             //plastic anchor goal for stopping circulation
             for (var i = 0; i < pts.Count; i++)
                 _persistentGoalList.Add(new AnchorPlastic(i, pts[i], _plasticDragRadius, plasticDrag));
 
+            if (s != null)
+            {
+                _persistentGoalList.Add(new OnMesh(ix, s, boundaryCollideStrength / 10));
+            }
+          
             //add anchor goal for fixed points
             for (var i = 0; i < fixedPointIndices.Count; i++)
                 _persistentGoalList.Add(new Anchor(fixedPointIndices[i], pts[fixedPointIndices[i]], 10000));
@@ -200,7 +204,7 @@ namespace MechanoAdaptiveGeneration
             //Goals and associated parameters
             var temporaryGoalList = new List<IGoal>();
             int ptCount = _ps.ParticleCount();
-            for (var i = 2; i < ptCount + 2; i++)
+            for (var i = 1; i < ptCount + 1; i++)
                 (_persistentGoalList[i] as AnchorPlastic).Limit = _plasticDragRadius;
 
             (_persistentGoalList[0] as SolidPoint).Strength = boundaryCollideStrength;

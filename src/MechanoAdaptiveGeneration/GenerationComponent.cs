@@ -75,9 +75,13 @@ namespace MechanoAdaptiveGeneration
 
             Mesh M = new Mesh();
             DA.GetData(2, ref M);
-            Mesh S = new Mesh();
-            DA.GetData(3, ref S);
 
+            Mesh S = new Mesh();
+            if (!DA.GetData(3, ref S))
+            {
+                S = null;
+            }
+            
             List<Point3d> Pts = new List<Point3d>();
             DA.GetDataList(4, Pts);
             List<double> Data = new List<double>();
@@ -90,7 +94,7 @@ namespace MechanoAdaptiveGeneration
             DA.GetData<double>(8, ref volumeFactor);
 
             bool UpdateScale = true;
-            double BoundaryCollideStrength = 10000.0;
+            double BoundaryCollideStrength = 1000.0;
             double AlignStrength = inputOptions[3];
             double plasticdragDist = inputOptions[4];
             int maxIterations = 1000;
