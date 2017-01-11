@@ -12,10 +12,10 @@ namespace MechanoAdaptiveGeneration.customK2goals
     {
         public int Exponent;
         public double Length;
-        public double Multiplier;
+        public double Ratio;
         public double Stiffness;
 
-        public NonLinearRepel(int Pt0, int Pt1, double Len, double Mult, double k, int q)
+        public NonLinearRepel(int Pt0, int Pt1, double Len, double Rat, double k, int q)
         {
 
             PIndex = new int[2] { Pt0, Pt1 };
@@ -23,7 +23,7 @@ namespace MechanoAdaptiveGeneration.customK2goals
             Weighting = new double[2] { k, k };
             Exponent = q;
             Length = Len;
-            Multiplier = Mult;
+            Ratio = Rat;
             Stiffness = k;
         }
 
@@ -37,12 +37,11 @@ namespace MechanoAdaptiveGeneration.customK2goals
 
             if (Overlap > 0)
             {
-                Move[0] = -0.15 * Current * Overlap;
-                Move[1] = 0.15 * Current * Overlap;
+                double SqrtRatio = Math.Sqrt(Ratio);
+                Move[0] = (-0.15 * Current * Overlap)/SqrtRatio;
+                Move[1] = (0.15 * Current * Overlap)*SqrtRatio;
 
-                Weighting[0] = Weighting[1] =
-                  //  Stiffness * (Math.Pow(CurrentLength * Multiplier, Exponent) - Math.Pow(Length * Multiplier, Exponent));
-                  Stiffness * Math.Pow((Length - Overlap) * Multiplier, Exponent);
+                Weighting[0] = Weighting[1] = Stiffness * Math.Pow((Length - Overlap), Exponent);
             }
             else
             {
