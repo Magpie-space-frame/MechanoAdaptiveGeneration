@@ -118,6 +118,12 @@ namespace MechanoAdaptiveGeneration
             return minMax;
         }
 
+        //calculate volume
+        public double GetVolume()
+        {
+            return 4 * Math.PI * _scaleX * _scaleY * _scaleZ / 3.0;
+        }
+
         //set updated unit vectors for
         public void CalculateAxesAndScales()
         {

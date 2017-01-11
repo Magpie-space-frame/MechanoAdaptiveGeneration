@@ -282,10 +282,12 @@ namespace MechanoAdaptiveGeneration
                 var eb = collideRef1[i];
                 var collision = new EllipsoidCollide(_ellipsoids[ea], _ellipsoids[eb]);
                 var pushDistance = collision.CalculateCollision();
+                
 
                 if (pushDistance != -1)
                 {
-                    temporaryGoalList.Add(new NonLinearRepel(eb, ea, pushDistance, 1, 0.1, -2));
+                    double VolRatio = Math.Pow((_ellipsoids[ea].GetVolume() / _ellipsoids[eb].GetVolume()),1/3.0);
+                    temporaryGoalList.Add(new NonLinearRepel(ea, eb, pushDistance, VolRatio , 0.1, -2));
 
                     var l = new Line(positions[ea], positions[eb]);
 
