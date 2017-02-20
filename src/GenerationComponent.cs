@@ -12,6 +12,10 @@ namespace MechanoAdaptiveGeneration
     {
         private bool Running;
         MechanoAdaptiveGeneration.Generator Gen;
+        private InputGeometryParameters IGP;
+        private KangarooGoalParameters KGP;
+        private EllipsoidParameters EP;
+        private AlgorithmConvergenceParameters ACP;
 
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -107,13 +111,16 @@ namespace MechanoAdaptiveGeneration
             if (Reset)
             {
                 Gen = new MechanoAdaptiveGeneration.Generator();
-                Gen.Initialize(M, S, Pts, Data, maxIterations, UpdateScale, plasticdragDist, BoundaryCollideStrength, AlignStrength,
-                    FixedPointIndices, minLongAxisLength, maxLongAxisLength, minSlenderness, volumeFactor);
+                IGP = new InputGeometryParameters(M, S, Pts, Data);
+                KGP = new KangarooGoalParameters(plasticdragDist, BoundaryCollideStrength, AlignStrength, FixedPointIndices);
+                EP = new EllipsoidParameters(minLongAxisLength, maxLongAxisLength, minSlenderness);
+                ACP = new AlgorithmConvergenceParameters(volumeFactor, maxIterations, UpdateScale);
+                Gen.Initialize(IGP, KGP, EP, ACP);
             }
 
             if (Run)
             {
-                Gen.Step(true, plasticdragDist, BoundaryCollideStrength, AlignStrength, minLongAxisLength, maxLongAxisLength, minSlenderness);
+                Gen.Step(KGP, EP, ACP);
             }
 
             //set the outputs
