@@ -124,6 +124,22 @@ namespace MechanoAdaptiveGeneration
             return 4 * Math.PI * _scaleX * _scaleY * _scaleZ / 3.0;
         }
 
+        public Vector3d GetAAxis()
+        {
+            Vector3d aAxis = new Vector3d(_transform[0], _transform[3], _transform[6]);
+            return _scaleX * aAxis;
+        }
+        public Vector3d GetBAxis()
+        {
+            Vector3d bAxis = new Vector3d(_transform[1], _transform[4], _transform[7]);
+            return _scaleY * bAxis;
+        }
+        public Vector3d GetCAxis()
+        {
+            Vector3d cAxis = new Vector3d(_transform[2], _transform[5], _transform[8]);
+            return _scaleZ * cAxis;
+        }
+        
         //set updated unit vectors for
         public void CalculateAxesAndScales()
         {
