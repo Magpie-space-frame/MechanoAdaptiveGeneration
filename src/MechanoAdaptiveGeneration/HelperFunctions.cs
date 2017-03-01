@@ -36,10 +36,10 @@ namespace MechanoAdaptiveGeneration
         }
 
         //evaluate % total volume taken up by ellipsoids, and correct the scaling factor if needed
-        public static void UpdateScaleByVolume(ref double scale, ref double totalEllipsoidVolume, ref double meshVol)
+        public static void updateEllipsoidsGlobally(ref double scale, ref double totalEllipsoidVolume, ref double meshVol)
         {
             double targetEllipsoidVolume = meshVol;
-            double fullScale = scale * Math.Pow(targetEllipsoidVolume / totalEllipsoidVolume, 1.0 / 3.0);
+            double fullScale = Math.Pow(targetEllipsoidVolume / totalEllipsoidVolume, 1.0 / 3.0);
             double currentScale = scale;
             scale = 0.5 * currentScale + 0.5 * fullScale;
         }
@@ -197,6 +197,14 @@ namespace MechanoAdaptiveGeneration
             var eigenValuesB = new double[nOfPoints];
             var eigenValuesC = new double[nOfPoints];
 
+            var oldEva = evec1.ToArray();
+            var oldEvb = evec2.ToArray();
+            var oldEvc = evec3.ToArray();
+            var oldEigenValuesA = eval1.ToArray();
+            var oldEigenValuesB = eval2.ToArray();
+            var oldEigenValuesC = eval3.ToArray();
+
+
             // for each point in P, find its coordinates in the grid
             // output the 8 points/indices of the corners
             // and the point coordinates of the position within that cell
@@ -336,6 +344,16 @@ namespace MechanoAdaptiveGeneration
                       eigenValuesA[j] = Math.Abs(eVal[ott[2]]);
                       eigenValuesB[j] = Math.Abs(eVal[ott[1]]);
                       eigenValuesC[j] = Math.Abs(eVal[ott[0]]);
+                  }
+                  else
+                  {
+                      eva[j] = oldEva[j];
+                      evb[j] = oldEvb[j];
+                      evc[j] = oldEvc[j];
+
+                      eigenValuesA[j] = oldEigenValuesA[j];
+                      eigenValuesB[j] = oldEigenValuesB[j];
+                      eigenValuesC[j] = oldEigenValuesC[j];
                   }
               });
 

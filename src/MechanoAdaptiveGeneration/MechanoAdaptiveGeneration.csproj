@@ -56,8 +56,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="KangarooSolver">
-      <HintPath>..\..\lib\KangarooSolver.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>S:\06_Resources\Software\Rhino\Grasshopper\Kangaroo2\CurrentVersions\KangarooSolver.dll</HintPath>
     </Reference>
     <Reference Include="RhinoCommon">
       <HintPath>..\..\..\..\..\..\..\Program Files\Rhinoceros 5.0 (64-bit)\System\RhinoCommon.dll</HintPath>
@@ -81,6 +80,7 @@
     <Compile Include="GenerationComponent.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="HelperFunctions.cs" />
+    <Compile Include="InputParameterClasses.cs" />
     <Compile Include="MechanoAdaptiveGenerationInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StressTensor.cs" />

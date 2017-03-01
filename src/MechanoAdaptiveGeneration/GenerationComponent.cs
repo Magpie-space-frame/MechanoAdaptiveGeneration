@@ -12,6 +12,10 @@ namespace MechanoAdaptiveGeneration
     {
         private bool Running;
         MechanoAdaptiveGeneration.Generator Gen;
+        private InputGeometryParameters IGP;
+        private KangarooGoalParameters KGP;
+        private EllipsoidParameters EP;
+        private AlgorithmConvergenceParameters ACP;
 
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -42,6 +46,7 @@ namespace MechanoAdaptiveGeneration
             pManager.AddNumberParameter("Options", "O", "The input options for the generation", GH_ParamAccess.list);
             pManager.AddNumberParameter("VolumeFactor", "VF", "The multiple of the input volume the total ellipsoid volume should take up", GH_ParamAccess.item);
             pManager[3].Optional = true;
+            pManager[6].Optional = true;
         }
 
         /// <summary>
@@ -106,13 +111,16 @@ namespace MechanoAdaptiveGeneration
             if (Reset)
             {
                 Gen = new MechanoAdaptiveGeneration.Generator();
-                Gen.Initialize(M, S, Pts, Data, maxIterations, UpdateScale, plasticdragDist, BoundaryCollideStrength, AlignStrength,
-                    FixedPointIndices, minLongAxisLength, maxLongAxisLength, minSlenderness, volumeFactor);
+                IGP = new InputGeometryParameters(M, S, Pts, Data);
+                KGP = new KangarooGoalParameters(plasticdragDist, BoundaryCollideStrength, AlignStrength, FixedPointIndices);
+                EP = new EllipsoidParameters(minLongAxisLength, maxLongAxisLength, minSlenderness);
+                ACP = new AlgorithmConvergenceParameters(volumeFactor, maxIterations, UpdateScale);
+                Gen.Initialize(IGP, KGP, EP, ACP);
             }
 
             if (Run)
             {
-                Gen.Step(true, plasticdragDist, BoundaryCollideStrength, AlignStrength, minLongAxisLength, maxLongAxisLength, minSlenderness);
+                Gen.Step(KGP, EP, ACP);
             }
 
             //set the outputs
@@ -128,6 +136,7 @@ namespace MechanoAdaptiveGeneration
             centres = Gen.GetCentres();
             longAxes = Gen.GetLongAxes();
             shortAxes = Gen.GetShortAxes();
+            Lines = Gen.GetLines();
 
             DA.SetDataList(0, centres);
             DA.SetDataList(1, longAxes);
@@ -135,7 +144,7 @@ namespace MechanoAdaptiveGeneration
 
             DA.SetData(3, percentVolPacked);
             DA.SetData(4, Iterations);
-            DA.SetData(5, Lines);
+            DA.SetDataList(5, Lines);
             DA.SetData(6, bakeResult);
             DA.SetDataList(7, RecentErrors);
         }

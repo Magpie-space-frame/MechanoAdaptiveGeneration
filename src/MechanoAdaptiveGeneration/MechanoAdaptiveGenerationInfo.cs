@@ -29,7 +29,7 @@ namespace MechanoAdaptiveGeneration
             get
             {
                 //Return a short string describing the purpose of this GHA library.
-                return "";
+                return "A set of tools to generate material-efficient space frames, inspired by bone trabeculae, within a loaded volume";
             }
         }
         public override Guid Id
@@ -45,7 +45,7 @@ namespace MechanoAdaptiveGeneration
             get
             {
                 //Return a string identifying you or your company.
-                return "";
+                return "Alessandro Felder, Harri Lewis, Daniel Piker";
             }
         }
         public override string AuthorContact
@@ -53,7 +53,7 @@ namespace MechanoAdaptiveGeneration
             get
             {
                 //Return a string representing your preferred contact details.
-                return "";
+                return "dpiker@fosterandpartners.com";
             }
         }
     }
