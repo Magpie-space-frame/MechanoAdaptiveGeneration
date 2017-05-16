@@ -8,11 +8,7 @@ namespace MechanoAdaptiveGeneration
 {
     /// <summary>
     /// Eigen solver implementation
-    /// taken from:
-    /// DotNetMatrix: Simple Matrix Library for .NET
-    /// by Paul Selormey
-    /// (public domain)
-    /// https://www.codeproject.com/Articles/5835/DotNetMatrix-Simple-Matrix-Library-for-NET
+    /// TODO: Give credit to author(s) of this code!!!!! before publishing the code!!!!!!
     /// </summary>
     public class Eigen
     {

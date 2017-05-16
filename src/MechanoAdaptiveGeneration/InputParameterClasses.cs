@@ -55,15 +55,21 @@ namespace MechanoAdaptiveGeneration
 
     public class AlgorithmConvergenceParameters
     {
-        public int maxIterations;
         public double volumeFactor;
         public bool updateScale;
+        public int maxIterations;
+        public int iterations;
+        public bool parametersChanged;
+        public bool isConverged;
 
         public AlgorithmConvergenceParameters(double volumeFactor, int maxIterations, bool updateScale)
         {
             this.volumeFactor = volumeFactor;
             this.maxIterations = maxIterations;
             this.updateScale = updateScale;
+            this.parametersChanged = false;
+            this.isConverged = false;
+            this.iterations = 0;
         }
     }
 }

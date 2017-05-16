@@ -36,6 +36,7 @@ namespace MechanoAdaptiveGeneration
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
+            pManager.AddBooleanParameter("Save", "Save", "Boolean input, save Magpie results when true", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Reset", "Rst", "Reset the generation", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Run", "R", "Run the generation", GH_ParamAccess.item);
             pManager.AddMeshParameter("Mesh", "M", "The volume to fill as a RhinoMesh", GH_ParamAccess.item);
@@ -45,8 +46,10 @@ namespace MechanoAdaptiveGeneration
             pManager.AddIntegerParameter("FixedPoints", "FP", "The indices of any points that should be fixed during the generation", GH_ParamAccess.list);
             pManager.AddNumberParameter("Options", "O", "The input options for the generation", GH_ParamAccess.list);
             pManager.AddNumberParameter("VolumeFactor", "VF", "The multiple of the input volume the total ellipsoid volume should take up", GH_ParamAccess.item);
-            pManager[3].Optional = true;
-            pManager[6].Optional = true;
+            pManager.AddGenericParameter("Output file name", "file", "String containing the path to the file the results are saved to", GH_ParamAccess.item);
+
+            pManager[4].Optional = true;
+            pManager[7].Optional = true;
         }
 
         /// <summary>
@@ -73,33 +76,38 @@ namespace MechanoAdaptiveGeneration
         {
 
             //get all the data and assign to pointers
+            int i = 0;
+            bool saveNow = new bool();
+            DA.GetData(i++, ref saveNow);
             bool Reset = new bool();
-            DA.GetData(0, ref Reset);
+            DA.GetData(i++, ref Reset);
             bool Run = new bool();
-            DA.GetData(1, ref Run);
+            DA.GetData(i++, ref Run);
 
             Mesh M = new Mesh();
-            DA.GetData(2, ref M);
+            DA.GetData(i++, ref M);
 
             Mesh S = new Mesh();
-            if (!DA.GetData(3, ref S))
+            if (!DA.GetData(i++, ref S))
             {
                 S = null;
             }
             
             List<Point3d> Pts = new List<Point3d>();
-            DA.GetDataList(4, Pts);
+            DA.GetDataList(i++, Pts);
             List<double> Data = new List<double>();
-            DA.GetDataList(5, Data);
+            DA.GetDataList(i++, Data);
             List<int> FixedPointIndices = new List<int>();
-            DA.GetDataList(6, FixedPointIndices);
+            DA.GetDataList(i++, FixedPointIndices);
             List<double> inputOptions = new List<double>();
-            DA.GetDataList(7, inputOptions);
+            DA.GetDataList(i++, inputOptions);
             double volumeFactor = new double();
-            DA.GetData<double>(8, ref volumeFactor);
+            DA.GetData<double>(i++, ref volumeFactor);
+            string outputPath= "";
+            DA.GetData<string>(i++, ref outputPath);
 
             bool UpdateScale = true;
-            double BoundaryCollideStrength = 1000.0;
+            double BoundaryCollideStrength = 1e8;
             double AlignStrength = inputOptions[3];
             double plasticdragDist = inputOptions[4];
             int maxIterations = 1000;
@@ -118,9 +126,21 @@ namespace MechanoAdaptiveGeneration
                 Gen.Initialize(IGP, KGP, EP, ACP);
             }
 
-            if (Run)
+            if (Run && !Gen.IsConverged())
             {
                 Gen.Step(KGP, EP, ACP);
+            }
+
+            if (saveNow)
+            {
+                MagpieWriter writer = new MagpieWriter();
+                MagpieResults results = new MagpieResults();
+                results.packing = new EllipsoidPacking(Gen.GetCentres(), Gen.GetLongAxes(), Gen.GetShortAxes());
+                results.kgp = Gen.GetKGP();
+                results.ep = Gen.GetEP();
+                results.acp = Gen.GetACP();
+                results.igp = Gen.GetIGP();
+                writer.write(outputPath, results);
             }
 
             //set the outputs
@@ -128,7 +148,7 @@ namespace MechanoAdaptiveGeneration
             List<Vector3d> longAxes = new List<Vector3d>();
             List<Vector3d> shortAxes = new List<Vector3d>();
             double percentVolPacked = new double();
-            int Iterations = 0;
+            int Iterations = Gen.GetCount();
             bool bakeResult = new bool();
             List<Double> RecentErrors = new List<Double>();
             List<Line> Lines = new List<Line>();
@@ -176,8 +196,7 @@ namespace MechanoAdaptiveGeneration
             get
             {
                 // You can add image files to your project resources and access them like this:
-                //return Resources.IconForThisComponent;
-                return null;
+                return MechanoAdaptiveGeneration.Properties.Resources.mapgieIcon;
             }
         }
 

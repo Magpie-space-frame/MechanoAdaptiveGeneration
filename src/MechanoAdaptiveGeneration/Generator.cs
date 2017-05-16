@@ -18,6 +18,12 @@ namespace MechanoAdaptiveGeneration
         {
         }
 
+        //parameter classes
+        InputGeometryParameters igp;
+        KangarooGoalParameters kgp;
+        EllipsoidParameters ep;
+        AlgorithmConvergenceParameters acp;
+
         //algorithm parameters
         private BackGroundData _backGroundData;
         private int _count;
@@ -97,6 +103,7 @@ namespace MechanoAdaptiveGeneration
 
                 _ellipsoids[i].UpdateTransform(a * _evec1[i], b * _evec2[i], b * _evec3[i]);
             }
+            this.ep = ep;
         }
 
         private void initializeKangarooGoals(InputGeometryParameters igp, KangarooGoalParameters kgp)
@@ -121,12 +128,13 @@ namespace MechanoAdaptiveGeneration
 
             if (igp.s != null)
             {
-                _persistentGoalList.Add(new OnMesh(ix, igp.s, kgp.boundaryCollideStrength / 10));
+                _persistentGoalList.Add(new OnMesh(ix, igp.s, kgp.boundaryCollideStrength/100));
             }
 
             //add anchor goal for fixed points
             for (var i = 0; i < kgp.fixedPointIndices.Count; i++)
-                _persistentGoalList.Add(new Anchor(kgp.fixedPointIndices[i], igp.pts[kgp.fixedPointIndices[i]], 10000));
+                _persistentGoalList.Add(new Anchor(kgp.fixedPointIndices[i], igp.pts[kgp.fixedPointIndices[i]], Double.MaxValue));
+            this.kgp = kgp;
         }
 
         private void initializeTensorField(InputGeometryParameters igp)
@@ -149,7 +157,7 @@ namespace MechanoAdaptiveGeneration
             //map tensorfield from grid onto points
             HelperFunctions.InterpolateTensor(igp.pts.ToArray(), ref _evec1, ref _evec2, ref _evec3, ref _eval1,
                ref _eval2, ref _eval3, _grid, _backGroundData);
-
+            this.igp = igp;
         }
 
         private void initializeAlgorithmConvergenceParameters(InputGeometryParameters inputGeomParams, AlgorithmConvergenceParameters algoConvergeParams)
@@ -162,6 +170,7 @@ namespace MechanoAdaptiveGeneration
             _updateInterval = 1;
             _maxIterations = algoConvergeParams.maxIterations;
             _recentVolumeFillingErrors = new double[10];
+            this.acp = algoConvergeParams;
         }
 
         /// <summary>
@@ -223,7 +232,7 @@ namespace MechanoAdaptiveGeneration
                 if (pushDistance != -1)
                 {
                     double VolRatio = Math.Pow((_ellipsoids[ea].GetVolume() / _ellipsoids[eb].GetVolume()), 1 / 3.0);
-                    temporaryGoalList.Add(new NonLinearRepel(ea, eb, pushDistance, VolRatio, 0.1, -2));
+                    temporaryGoalList.Add(new NonLinearRepel(ea, eb, pushDistance, VolRatio, 10, -2));
 
                     var l = new Line(positions[ea], positions[eb]);
 
@@ -271,7 +280,17 @@ namespace MechanoAdaptiveGeneration
 
                         if (_eval2[i] == 0.0) _sa[i] = new Vector3d(0.0001, 0.0001, 0.0001);
 
-                        double newAAxisLength = (damping * _ellipsoids[i].GetAAxis().Length + (1.0 - damping) * a);
+                        Vector3d newAAxis = damping  * _ellipsoids[i].GetAAxis() + (1.0 - damping) * a * _evec1[i];
+                        Vector3d newBAxis = damping  * _ellipsoids[i].GetBAxis() + (1.0 - damping) * b * _evec2[i];
+                        Vector3d newCAxis = damping  * _ellipsoids[i].GetCAxis() + (1.0 - damping) * b * _evec3[i];
+
+                        _la[i] = newAAxis;
+                        _sa[i] = newBAxis;
+
+                        _ellipsoids[i].UpdateTransform(newAAxis, newBAxis, newCAxis);
+                        sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * newAAxis.Length * newBAxis.Length * newCAxis.Length/3.0;
+
+                        /*double newAAxisLength = (damping * _ellipsoids[i].GetAAxis().Length + (1.0 - damping) * a);
                         double newBAxisLength = (damping * _ellipsoids[i].GetBAxis().Length + (1.0 - damping) * b);
                         double newCAxisLength = (damping * _ellipsoids[i].GetCAxis().Length + (1.0 - damping) * b);
 
@@ -279,7 +298,7 @@ namespace MechanoAdaptiveGeneration
                         sumOfCurrentEllipsoidVolumes += 4.0 * Math.PI * newAAxisLength * newBAxisLength * newCAxisLength / 3.0;
 
                         _la[i] = newAAxisLength * _evec1[i];
-                        _sa[i] = newBAxisLength * _evec2[i];
+                        _sa[i] = newBAxisLength * _evec2[i];*/
 
                     }
                 }
@@ -327,18 +346,14 @@ namespace MechanoAdaptiveGeneration
             _ps.SimpleStep(temporaryGoalList);
             _count++;
 
-            //if (_count > maxIterations / 10)
-            //{
-            //    var averageFillingError = _recentVolumeFillingErrors.ToList().Average();
-            //    if ((averageFillingError < 0.0001) || (_count > maxIterations))
-            //    {
-            //        _running = false;
-            //        bakeResult = true;
-            //    }
-            //}
-
-            //iterations = _count;
-
+            if (_count > _maxIterations / 10)
+            {
+                var averageFillingError = _recentVolumeFillingErrors.ToList().Average();
+                if ((averageFillingError < 0.0001) || (_count > _maxIterations))
+                {
+                    acp.isConverged = true;
+                }
+            }
         }
 
         public List<Point3d> GetCentres()
@@ -360,5 +375,36 @@ namespace MechanoAdaptiveGeneration
         {
             return _lineList;
         }
+
+        public KangarooGoalParameters GetKGP()
+        {
+            return this.kgp;
+        }
+
+        public EllipsoidParameters GetEP()
+        {
+            return this.ep;    
+        }
+        public AlgorithmConvergenceParameters GetACP()
+        {
+            return this.acp;
+        }
+
+        public InputGeometryParameters GetIGP()
+        {
+            return this.igp;
+        }
+
+        public int GetCount()
+        {
+            return this._count;
+        }
+
+        public bool IsConverged()
+        {
+            return this.acp.isConverged;
+        }
+
+
     }
 }
