@@ -65,6 +65,7 @@ namespace MechanoAdaptiveGeneration
             if (AngleNZ < lowest)
             {
                 TargetDir = -Vec[2];
+                lowest = AngleNZ;
             }
 
             Vector3d V = EdgeVec;
