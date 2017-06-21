@@ -112,7 +112,7 @@ namespace MechanoAdaptiveGeneration
             _persistentGoalList = new List<IGoal>();
             _ps.ClearParticles();
             _persistentGoalList.Clear();
-            _plasticDragRadius = 0.01;
+            _plasticDragRadius = 0.001;
             _fixedPointIndices = kgp.fixedPointIndices;
 
             var ix = new List<int>();
@@ -236,16 +236,28 @@ namespace MechanoAdaptiveGeneration
 
                     var l = new Line(positions[ea], positions[eb]);
 
+
                     temporaryGoalList.Add(new Align(eb, ea,
                         new Vector3d[3]
                         {
-                            0.5*(_ellipsoids[ea].UnitXAxis + _ellipsoids[eb].UnitXAxis),
-                            0.5*(_ellipsoids[ea].UnitYAxis + _ellipsoids[eb].UnitYAxis),
-                            0.5*(_ellipsoids[ea].UnitZAxis + _ellipsoids[eb].UnitZAxis)
+                            getDirectedAverage(_ellipsoids[ea].UnitXAxis,_ellipsoids[eb].UnitXAxis),
+                            getDirectedAverage(_ellipsoids[ea].UnitYAxis,_ellipsoids[eb].UnitYAxis),
+                            getDirectedAverage(_ellipsoids[ea].UnitZAxis,_ellipsoids[eb].UnitZAxis)
                         }, kangarooGoalParams.alignStrength));
 
                     _lineList.Add(l);
                 }
+            }
+        }
+
+        private Vector3d getDirectedAverage(Vector3d v1, Vector3d v2)
+        {
+            if (v1 * v2 > 0)
+            {
+                return 0.5 * (v1 + v2);
+            }
+            else {
+                return 0.5 * (v1 - v2);
             }
         }
 
