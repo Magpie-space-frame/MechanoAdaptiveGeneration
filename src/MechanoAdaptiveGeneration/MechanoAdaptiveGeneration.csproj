@@ -47,12 +47,12 @@
   <ItemGroup>
     <Reference Include="GH_IO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=6a29997d2e6b4f97, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Grasshopper for Rhino 5\GH_IO.dll</HintPath>
+      <HintPath>..\..\lib\GH_IO.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Grasshopper, Version=1.0.0.20, Culture=neutral, PublicKeyToken=dda4f5ec2cd80803, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Grasshopper for Rhino 5\Grasshopper.dll</HintPath>
+      <HintPath>..\..\lib\Grasshopper.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="KangarooSolver, Version=2.2.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -60,7 +60,7 @@
       <HintPath>..\..\lib\KangarooSolver.dll</HintPath>
     </Reference>
     <Reference Include="RhinoCommon">
-      <HintPath>..\..\..\..\..\..\..\Program Files\Rhinoceros 5.0 (64-bit)\System\RhinoCommon.dll</HintPath>
+      <HintPath>..\..\lib\RhinoCommon.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
