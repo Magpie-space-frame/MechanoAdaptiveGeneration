@@ -124,10 +124,10 @@ namespace MechanoAdaptiveGeneration
             get
             {
                 // You can add image files to your project resources and access them like this:
-                //return Resources.IconForThisComponent;
-                return null;
+                return MechanoAdaptiveGeneration.Properties.Resources.book;
             }
         }
+
         /// <summary>
         /// Each component must have a unique Guid to identify it. 
         /// It is vital this Guid doesn't change otherwise old ghx files 
