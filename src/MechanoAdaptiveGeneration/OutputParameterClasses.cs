@@ -19,6 +19,7 @@ namespace MechanoAdaptiveGeneration
         public EllipsoidParameters ep;
 
         public EllipsoidPacking packing;
+        public List<Line> collisionLines;
         public Boolean paramsUnchangedDuringPacking;
         public Boolean converged;
         public int iterations;
@@ -83,7 +84,17 @@ namespace MechanoAdaptiveGeneration
             }
             inputGeometryParameterString += "End Input Field\n";
 
-            return this.packing.ToString() + kangarooGoalParameterString + ellipsoidParameterString + algorithmConvergenceParameterString + inputGeometryParameterString;
+            string collisionLinesString = "Lines\n";
+            for (int i = 0; i < this.collisionLines.Count;i++)
+            {
+                collisionLinesString += collisionLines[i].From.ToString();
+                collisionLinesString += ",";
+                collisionLinesString += collisionLines[i].To.ToString();
+                collisionLinesString += "\n";
+            }
+            collisionLinesString += "End Lines";
+
+            return this.packing.ToString() + kangarooGoalParameterString + ellipsoidParameterString + algorithmConvergenceParameterString + inputGeometryParameterString + collisionLinesString;
         }
     }
 

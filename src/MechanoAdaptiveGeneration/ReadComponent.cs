@@ -38,6 +38,7 @@ namespace MechanoAdaptiveGeneration
             pManager.AddGenericParameter("EllipsoidCentres", "EC", "The locations of the centres for each ellipsoid", GH_ParamAccess.list);
             pManager.AddGenericParameter("LongAxes", "LA", "The long axes for each ellipsoid as a Vector3d", GH_ParamAccess.list);
             pManager.AddGenericParameter("ShortAxes", "SA", "The short axes for each ellipsoid as a Vector3d", GH_ParamAccess.list);
+            pManager.AddGenericParameter("CollisionLines", "lines", "A list of lines connecting the centres of colliding ellipsoids", GH_ParamAccess.list);
 
             //kangaroo goal parameters
             pManager.AddGenericParameter("Plastic Drag distance", "drag", "The Plastic drag distance used in the plastic anchor goal", GH_ParamAccess.item);
@@ -53,6 +54,8 @@ namespace MechanoAdaptiveGeneration
             //algorithm convergence parameters
             pManager.AddGenericParameter("Volume Factor", "VF", "The multiple of the input volume the converged ellipsoids should make up in total", GH_ParamAccess.item);
             pManager.AddGenericParameter("Maximum iterations", "maxIt", "The maximum iterations allowed", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Iterations performed", "it", "Iterations performed", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Converged", "conv", "Boolean specifying whether convergence criterion was fulfilled", GH_ParamAccess.item);
             pManager.AddGenericParameter("UpdateScale", "update", "Specifies whether the scale of the ellipsoids should be updated", GH_ParamAccess.item);
             pManager.AddGenericParameter("Parameters unchanged", "unchanged", "Specifies whether all parameters remained the same throughout packing process", GH_ParamAccess.item);
 
@@ -73,6 +76,7 @@ namespace MechanoAdaptiveGeneration
             List<Point3d> centres = new List<Point3d>();
             List<Vector3d> longAxes = new List<Vector3d>();
             List<Vector3d> shortAxes = new List<Vector3d>();
+            List<Line> collisionLines = new List<Line>();
 
             MagpieReader magpieReader = new MagpieReader();
             
@@ -85,9 +89,11 @@ namespace MechanoAdaptiveGeneration
             centres = results.packing.GetCentres();
             longAxes = results.packing.GetLongAxes();
             shortAxes = results.packing.GetShortAxes();
+           
             DA.SetDataList(i++, centres);
             DA.SetDataList(i++, longAxes);
             DA.SetDataList(i++, shortAxes);
+            DA.SetDataList(i++, results.collisionLines);
 
             KangarooGoalParameters kgp = results.kgp;
             DA.SetData(i++, kgp.plasticDragDistance);
@@ -103,6 +109,8 @@ namespace MechanoAdaptiveGeneration
             AlgorithmConvergenceParameters acp = results.acp;
             DA.SetData(i++, acp.volumeFactor);
             DA.SetData(i++, acp.maxIterations);
+            DA.SetData(i++, results.iterations);
+            DA.SetData(i++, results.converged);
             DA.SetData(i++, acp.updateScale);
             DA.SetData(i++, acp.parametersChanged);
 
@@ -127,7 +135,6 @@ namespace MechanoAdaptiveGeneration
                 return MechanoAdaptiveGeneration.Properties.Resources.book;
             }
         }
-
         /// <summary>
         /// Each component must have a unique Guid to identify it. 
         /// It is vital this Guid doesn't change otherwise old ghx files 
