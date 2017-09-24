@@ -31,6 +31,8 @@ namespace MechanoAdaptiveGeneration
 
         private bool _isInitialized;
         private double[] _recentVolumeFillingErrors;
+        public double[] _recentTotalKineticEnergy;
+        private int _sizeOfDeviations;
         private int _updateInterval;
         private double _meshVolume;
         private double _targetVolumeToFill;
@@ -168,8 +170,10 @@ namespace MechanoAdaptiveGeneration
             _scaleEllipsoids = Math.Pow(_targetVolumeToFill / inputGeomParams.pts.Count, 1.0 / 3.0);
             _count = 0;
             _updateInterval = 1;
+            _sizeOfDeviations = 25;
             _maxIterations = algoConvergeParams.maxIterations;
-            _recentVolumeFillingErrors = new double[10];
+            _recentVolumeFillingErrors = new double[_sizeOfDeviations];
+            _recentTotalKineticEnergy = new double[_sizeOfDeviations];
             this.acp = algoConvergeParams;
         }
 
@@ -198,10 +202,16 @@ namespace MechanoAdaptiveGeneration
         {
             double currentVolumeFillingError = Math.Abs(_targetVolumeToFill - sumOfCurrentEllipsoidVolumes);
             int numberOfInterpolations = (int)Math.Floor((double)_count / _updateInterval);
-            _recentVolumeFillingErrors[(int)(numberOfInterpolations % 10)] = currentVolumeFillingError;
+            _recentVolumeFillingErrors[(int)(numberOfInterpolations % _sizeOfDeviations)] = currentVolumeFillingError;
 
         }
 
+        private void updateRecentTotalKineticEnergy(double totalKineticEnergy)
+        {
+            int numberOfInterpolations = (int)Math.Floor((double)_count / _updateInterval);
+            _recentTotalKineticEnergy[(int)(numberOfInterpolations % _sizeOfDeviations)] = totalKineticEnergy;
+
+        }
         private void updatePersistentGoals(KangarooGoalParameters kangarooGoalParams)
         {
             for (var i = 1; i < _ps.ParticleCount() + 1; i++)
@@ -357,11 +367,31 @@ namespace MechanoAdaptiveGeneration
             temporaryGoalList.AddRange(_persistentGoalList);
             _ps.SimpleStep(temporaryGoalList);
             _count++;
+            acp.iterations = _count;
 
-            if (_count > _maxIterations / 10)
+            List<Double> distances = new List<Double>();
+            if (_count % _updateInterval == 0)
             {
-                var averageFillingError = _recentVolumeFillingErrors.ToList().Average();
-                if ((averageFillingError < 0.0001) || (_count > _maxIterations))
+                var newPositions = _ps.GetPositionArray();
+                for(int i=0; i<newPositions.Length; i++)
+                {
+                    Point3d p = newPositions[i];
+                    distances.Add(p.DistanceTo(positions[i]));
+                }
+                Double[] distanceArray = distances.ToArray();
+                Array.Sort(distanceArray);
+                updateRecentTotalKineticEnergy(distanceArray[distanceArray.Length/2]);
+            }
+
+            if (_count > _sizeOfDeviations)
+            {
+                var averageAbsoluteError = _recentTotalKineticEnergy.ToList().Average();
+                var relativeErrors = new List<Double>(_sizeOfDeviations);
+                for (int i = 0; i < _sizeOfDeviations; i++)
+                {
+                    relativeErrors.Add(Math.Abs(_recentTotalKineticEnergy[i] - averageAbsoluteError)/averageAbsoluteError);
+                }
+                if (((averageAbsoluteError < 0.0005) && (relativeErrors.ToList().Average()<0.02)) || (_count > _maxIterations))
                 {
                     acp.isConverged = true;
                 }
